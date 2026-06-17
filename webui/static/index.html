@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AVAAS</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#14181d; --panel2:#1b2128; --ink:#e6edf3; --dim:#8b97a3;
+    --line:#283039; --accent:#56d364; --warn:#e3b341; --bad:#f85149; --cool:#58a6ff;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--mono);}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+  header h1{font-size:15px;margin:0;letter-spacing:.5px;font-weight:600}
+  header .sub{color:var(--dim);font-size:12px}
+  .grow{flex:1}
+  .pill{font-size:11px;padding:3px 9px;border-radius:11px;border:1px solid var(--line);color:var(--dim)}
+  .pill.on{color:var(--accent);border-color:var(--accent)}
+  .pill.off{color:var(--bad);border-color:var(--bad)}
+  main{display:grid;grid-template-columns:1fr 360px;gap:0;height:calc(100vh - 50px)}
+  .stage{padding:22px 26px;overflow:auto}
+  .side{border-left:1px solid var(--line);background:var(--panel);padding:18px;overflow:auto}
+  .crumb{color:var(--dim);font-size:12px;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .kind{font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:9px;border:1px solid var(--cool);color:var(--cool)}
+  .kind.spontaneous{border-color:var(--warn);color:var(--warn)}
+  .kind.spell{border-color:#bc8cff;color:#bc8cff}
+  .kind.conversational{border-color:var(--accent);color:var(--accent)}
+  .prompt{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:30px 28px;min-height:150px;display:flex;align-items:center;font-size:30px;line-height:1.35;letter-spacing:.2px;white-space:pre-wrap}
+  .prompt.small{font-size:20px}
+  .hint{color:var(--dim);font-size:12px;margin:10px 2px 0}
+  .controls{display:flex;gap:10px;align-items:center;margin:18px 0;flex-wrap:wrap}
+  button{font-family:var(--mono);font-size:13px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:10px 16px;cursor:pointer;transition:.12s}
+  button:hover:not(:disabled){border-color:var(--dim)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.rec{border-color:var(--bad);color:var(--bad)}
+  button.rec.active{background:var(--bad);color:#fff;animation:pulse 1.1s infinite}
+  button.primary{border-color:var(--accent);color:var(--accent)}
+  button.ghost{background:transparent}
+  @keyframes pulse{50%{opacity:.55}}
+  .nav{display:flex;gap:8px;margin-left:auto}
+  /* meter */
+  .meter-wrap{margin:14px 0 6px}
+  .meter{position:relative;height:30px;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:#06080a}
+  .meter .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:linear-gradient(90deg,var(--cool),var(--accent) 55%,var(--warn) 80%,var(--bad));transition:width .05s linear}
+  .meter .target{position:absolute;top:0;bottom:0;width:2px;background:#fff;opacity:.7}
+  .meter .zone{position:absolute;top:0;bottom:0;opacity:.10}
+  .meter-labels{display:flex;justify-content:space-between;color:var(--dim);font-size:10px;margin-top:3px}
+  .verdict{font-size:13px;margin-top:6px;height:18px}
+  .verdict.good{color:var(--accent)} .verdict.loud{color:var(--bad)} .verdict.quiet{color:var(--cool)} .verdict.ok{color:var(--warn)}
+  /* qc card */
+  .qc{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel)}
+  .qc h4{margin:0 0 8px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+  .qc .row{display:flex;gap:18px;flex-wrap:wrap}
+  .qc .stat{font-size:12px}.qc .stat b{color:var(--ink)}.qc .stat span{color:var(--dim)}
+  .flags{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .flag{font-size:11px;padding:2px 8px;border-radius:9px;background:rgba(248,81,73,.14);color:var(--bad);border:1px solid rgba(248,81,73,.4)}
+  .flag.clean{background:rgba(86,211,100,.12);color:var(--accent);border-color:rgba(86,211,100,.4)}
+  audio{width:100%;margin-top:10px;filter:invert(.9) hue-rotate(180deg)}
+  /* side */
+  .side h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:4px 0 10px}
+  .big{font-size:30px;font-weight:600}
+  .gate{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;background:var(--panel2)}
+  .gate.ready{border-color:var(--accent)}
+  .bar{height:7px;border-radius:4px;background:#06080a;overflow:hidden;margin:8px 0}
+  .bar > i{display:block;height:100%;background:var(--accent)}
+  .train{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px}
+  .train.launched{border-color:var(--accent);color:var(--accent)}
+  .train.ready{border-color:var(--warn);color:var(--warn)}
+  .train.error{border-color:var(--bad);color:var(--bad)}
+  .seclist{list-style:none;margin:0;padding:0}
+  .seclist li{padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .seclist li:hover{color:#fff}
+  .seclist li.active{color:var(--accent)}
+  .seclist .top{display:flex;justify-content:space-between;font-size:12px}
+  .seclist .sb{height:5px;border-radius:3px;background:#06080a;margin-top:5px;overflow:hidden}
+  .seclist .sb>i{display:block;height:100%;background:var(--cool)}
+  .seclist .sb>i.done{background:var(--accent)}
+  .toggles{display:flex;gap:8px;align-items:center;margin:6px 0 16px;flex-wrap:wrap}
+  .toggle{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--dim);cursor:pointer}
+  .dotgrid{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+  .dot{width:11px;height:11px;border-radius:3px;background:#222a31;cursor:pointer;border:1px solid transparent}
+  .dot.done{background:var(--accent)} .dot.flag{background:var(--bad)} .dot.cur{border-color:#fff}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 16px;font-size:13px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .err{color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>◆ AVAAS</h1>
+  <span class="sub" id="qcpill">QC: …</span>
+  <span class="grow"></span>
+  <span class="pill" id="mic-pill">mic: idle</span>
+  <span class="pill" id="roomtone-pill">room tone: none</span>
+  <button class="ghost" id="btn-roomtone" title="Record ~4s of silence to profile your room's background hiss">Sample room tone</button>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="crumb" id="crumb">loading…</div>
+    <div class="prompt" id="prompt">…</div>
+    <div class="hint" id="hint"></div>
+
+    <div class="meter-wrap">
+      <div class="meter" id="meter">
+        <div class="zone" id="zone-quiet"></div>
+        <div class="zone" id="zone-good" style="background:var(--accent)"></div>
+        <div class="fill" id="meter-fill"></div>
+        <div class="target" id="meter-target"></div>
+      </div>
+      <div class="meter-labels"><span>-60</span><span>-30</span><span>-12</span><span>-6 target</span><span>0 dBFS</span></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+
+    <div class="controls">
+      <button class="rec" id="btn-rec">● Record</button>
+      <button id="btn-play" disabled>▶ Play take</button>
+      <button class="primary" id="btn-save" disabled>✓ Keep &amp; process</button>
+      <button class="ghost" id="btn-redo" disabled>↺ Redo</button>
+      <label class="toggle ghost" style="border:1px solid var(--line);border-radius:9px;padding:9px 12px">
+        <input type="checkbox" id="up-input" hidden>
+        <span>⬆ Upload file</span>
+      </label>
+      <div class="nav">
+        <button id="btn-prev">‹ Prev</button>
+        <button id="btn-next">Next ›</button>
+        <button id="btn-skipnext" title="Jump to next unrecorded prompt">⤼ Next gap</button>
+      </div>
+    </div>
+
+    <div class="qc" id="qc" style="display:none">
+      <h4>Processing result</h4>
+      <div class="row" id="qc-stats"></div>
+      <div class="flags" id="qc-flags"></div>
+      <audio id="review" controls preload="none"></audio>
+      <div class="hint" id="qc-transcript"></div>
+    </div>
+
+    <div class="dotgrid" id="dotgrid"></div>
+  </section>
+
+  <aside class="side">
+    <h3>Training readiness</h3>
+    <div class="gate" id="gate">
+      <div class="big"><span id="clean-min">0.0</span><span style="font-size:14px;color:var(--dim)"> / <span id="tgt-min">60</span> min clean</span></div>
+      <div class="bar"><i id="gate-bar" style="width:0%"></i></div>
+      <div class="hint" id="gate-note">record to begin</div>
+    </div>
+
+    <div class="train" id="train">training: idle</div>
+
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="auto-train" checked> auto-train when ready</label>
+      <label class="toggle"><input type="checkbox" id="denoise" checked> denoise (room-tone)</label>
+      <label class="toggle">QC model
+        <select id="whisper-model" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--mono);font-size:11px">
+          <option value="base.en">base.en (fast)</option>
+          <option value="small.en">small.en</option>
+          <option value="medium.en">medium.en</option>
+          <option value="large-v3">large-v3 (best)</option>
+        </select>
+      </label>
+    </div>
+    <button class="primary" id="btn-train" style="width:100%;margin-bottom:18px" disabled>Start training now</button>
+
+    <h3>Sections</h3>
+    <ul class="seclist" id="seclist"></ul>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (p,o)=>fetch(p,o).then(async r=>{if(!r.ok){throw new Error((await r.text()).slice(0,200));}return r.json();});
+let SECTIONS=[], FLAT=[], cur=0, recState='idle';
+let mediaRec=null, chunks=[], lastBlob=null, lastIsUpload=false;
+let pttHeld=false, pttReleasePending=false;   // push-to-talk (hold Space) state
+let audioCtx=null, analyser=null, micStream=null, rafId=null, peakHold=-120, holdT=0;
+
+const dbToPct = db => Math.max(0, Math.min(100, (db+60)/60*100));
+
+function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.className='toast show'+(bad?' err':'');setTimeout(()=>t.className='toast',2600);}
+
+// ---- script + progress load ----
+async function loadScript(){
+  const d = await api('/api/script');
+  SECTIONS = d.sections; FLAT=[];
+  for(const s of SECTIONS) for(const p of s.prompts) FLAT.push({...p, _title:s.title});
+  renderSecList(); renderDots();
+  if(FLAT.length){ cur = FLAT.findIndex(p=>!p.recorded); if(cur<0) cur=0; showPrompt(); }
+  refreshProgress();
+}
+function applyState(pr, training){
+  $('#clean-min').textContent=pr.total_clean_min.toFixed(1);
+  $('#tgt-min').textContent=pr.target_min;
+  $('#gate-bar').style.width=Math.min(100, pr.total_clean_min/pr.target_min*100)+'%';
+  $('#gate').className='gate'+(pr.ready?' ready':'');
+  $('#gate-note').textContent = pr.ready ? 'READY — all gates met'
+      : (pr.under_represented.length? 'under-represented: '+pr.under_represented.join(', ')
+         : (pr.target_min-pr.total_clean_min).toFixed(1)+' min to go');
+  $('#btn-train').disabled = !(pr.ready || false);
+  if(training) renderTrain(training);
+  for(const row of pr.sections){
+    const el=document.querySelector(`[data-sec="${row.section}"] .sb>i`);
+    if(el){el.style.width=Math.round(row.coverage*100)+'%'; el.className=row.coverage>=0.8?'done':'';}
+    const cnt=document.querySelector(`[data-sec="${row.section}"] .cnt`);
+    if(cnt) cnt.textContent=`${row.recorded}/${row.total} · ${row.minutes.toFixed(1)}m`;
+  }
+}
+async function refreshProgress(){
+  const d = await api('/api/progress');
+  $('#qcpill').textContent='QC: '+(d.qc_available?('whisper '+(window._wm||'base.en')):'transcript-only');
+  applyState(d.progress, d.training);
+}
+// SSE: live push from the server (replaces polling). Another tab recording,
+// a finished preprocess, or an auto-train trigger updates this tab instantly.
+let _es=null;
+function connectSSE(){
+  try{ _es=new EventSource('/api/events'); }catch(e){ return; }
+  _es.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(_){ return; }
+    if(m.type!=='state') return;
+    if(m.progress) applyState(m.progress, m.training);
+    if(m.saved){ const p=FLAT.find(x=>x.id===m.saved); if(p){p.recorded=true; p.flags=m.flags||[];}
+                 renderSecList(); renderDots(); }
+    if(m.deleted){ const p=FLAT.find(x=>x.id===m.deleted); if(p){p.recorded=false; p.flags=[];}
+                   renderSecList(); renderDots(); }
+    if(m.training && m.training.state==='launched') toast('🚀 training launched on the training host');
+  };
+  _es.onerror=()=>{ /* browser auto-reconnects; slow poll is the backstop */ };
+}
+function renderTrain(t){
+  const el=$('#train'); const s=t.state;
+  el.className='train '+(s==='launched'?'launched':s==='ready'?'ready':s==='error'?'error':'');
+  el.textContent='training: '+s+(t.detail?(' — '+t.detail):'');
+}
+
+// ---- prompt display ----
+function showPrompt(){
+  const p=FLAT[cur]; if(!p) return;
+  const isSpon=p.kind==='spontaneous';
+  $('#crumb').innerHTML=`<span class="kind ${p.kind}">${p.kind}</span> ${p._title}
+      <span style="color:var(--dim)">· ${p.id} · ${cur+1}/${FLAT.length}</span>`;
+  $('#prompt').className='prompt'+(p.text.length>90?' small':'');
+  $('#prompt').textContent = isSpon ? '🗣  '+p.text : p.text;
+  const ptt = isPushToTalk();
+  $('#hint').textContent = (isSpon
+    ? "Don't read this — talk freely about it for 60–90 seconds. Fillers and pauses are good training signal."
+    : (p.kind==='spell'?'Say the name, then spell it at a natural pace.'
+       :"Read it the way you'd actually say it on the phone. Natural, not announcer-mode."))
+    + (ptt ? '   ·   Hold Space to record, release when done.'
+           : '   ·   Press Space to start, Space again to stop.');
+  $('#btn-rec').textContent = ptt ? '● Hold Space' : '● Record';
+  resetTakeUI();
+  const rec = p.recorded;
+  $('#qc').style.display = rec? 'block':'none';
+  if(rec) loadExistingQc(p.id);
+  renderDots();
+}
+function resetTakeUI(){
+  lastBlob=null; lastIsUpload=false;
+  $('#btn-play').disabled=true; $('#btn-save').disabled=true; $('#btn-redo').disabled=true;
+}
+
+async function loadExistingQc(id){
+  // pull the manifest record via /api/script cache (already have flags+duration there)
+  const p=FLAT.find(x=>x.id===id); if(!p) return;
+  $('#qc-stats').innerHTML = `<div class="stat"><span>status</span> <b>already recorded</b></div>
+     <div class="stat"><span>duration</span> <b>${p.duration?.toFixed?.(2)??'—'}s</b></div>`;
+  $('#qc-flags').innerHTML = (p.flags&&p.flags.length)
+     ? p.flags.map(f=>`<span class="flag">${f}</span>`).join('')
+     : '<span class="flag clean">clean ✓</span>';
+  const a=$('#review'); a.src=`/api/clip/${id}/audio?t=`+Date.now();
+  $('#qc-transcript').textContent='';
+}
+
+// ---- meter (Web Audio) ----
+async function ensureMic(){
+  if(micStream) return micStream;
+  micStream = await navigator.mediaDevices.getUserMedia({audio:{
+    echoCancellation:false, noiseSuppression:false, autoGainControl:false,
+    channelCount:1, sampleRate:48000 }});
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate:48000});
+  const src = audioCtx.createMediaStreamSource(micStream);
+  analyser = audioCtx.createAnalyser(); analyser.fftSize=2048;
+  src.connect(analyser);
+  $('#mic-pill').textContent='mic: live'; $('#mic-pill').className='pill on';
+  layoutMeterZones();
+  meterLoop();
+  return micStream;
+}
+function layoutMeterZones(){
+  // target -6 dBFS marker; good zone -12..-3; quiet zone <-30
+  $('#meter-target').style.left = dbToPct(-6)+'%';
+  const zg=$('#zone-good'); zg.style.left=dbToPct(-12)+'%'; zg.style.width=(dbToPct(-3)-dbToPct(-12))+'%';
+  const zq=$('#zone-quiet'); zq.style.left='0%'; zq.style.width=dbToPct(-30)+'%'; zq.style.background='var(--cool)';
+}
+function meterLoop(){
+  const buf=new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  let peak=0,sum=0;
+  for(let i=0;i<buf.length;i++){const v=Math.abs(buf[i]);if(v>peak)peak=v;sum+=buf[i]*buf[i];}
+  const rms=Math.sqrt(sum/buf.length);
+  const peakDb = peak>1e-6? 20*Math.log10(peak):-120;
+  const rmsDb = rms>1e-6? 20*Math.log10(rms):-120;
+  if(peakDb>peakHold||performance.now()-holdT>800){peakHold=peakDb;holdT=performance.now();}
+  $('#meter-fill').style.width=dbToPct(rmsDb)+'%';
+  setVerdict(peakHold, peakDb);
+  rafId=requestAnimationFrame(meterLoop);
+}
+function setVerdict(peakHoldDb, peakDb){
+  const v=$('#verdict');
+  if(peakDb>-1){v.className='verdict loud';v.textContent=`⚠ TOO LOUD / clipping (peak ${peakDb.toFixed(1)} dBFS) — back off the mic`;}
+  else if(peakHoldDb>=-12 && peakHoldDb<=-3){v.className='verdict good';v.textContent=`✓ good level (peak ${peakHoldDb.toFixed(1)} dBFS)`;}
+  else if(peakHoldDb<-30){v.className='verdict quiet';v.textContent=`▽ too quiet (peak ${peakHoldDb.toFixed(1)} dBFS) — closer / louder`;}
+  else {v.className='verdict ok';v.textContent=`peak ${peakHoldDb.toFixed(1)} dBFS — aim for ~-6`;}
+}
+
+// ---- recording ----
+function pickMime(){
+  for(const m of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'])
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+async function startRec(){
+  if(recState==='recording') return;
+  await ensureMic();
+  if(recState==='recording') return;          // re-entry guard (async gap)
+  chunks=[]; const mime=pickMime();
+  mediaRec = new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
+  mediaRec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  mediaRec.onstop=()=>{
+    lastBlob=new Blob(chunks,{type: mediaRec.mimeType||'audio/webm'}); lastIsUpload=false;
+    peakHold=-120;
+    $('#btn-rec').textContent=isPushToTalk()?'● Hold Space':'● Record';
+    $('#btn-rec').classList.remove('active');
+    $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
+    recState='have-take';
+  };
+  mediaRec.start();
+  recState='recording'; peakHold=-120;
+  $('#btn-rec').textContent='■ Stop'; $('#btn-rec').classList.add('active');
+  if(pttReleasePending){ pttReleasePending=false; stopRec(); }   // released mid-start
+}
+function stopRec(){ if(recState==='recording' && mediaRec) mediaRec.stop(); }
+async function toggleRec(){ if(recState==='recording') stopRec(); else await startRec(); }
+function isPushToTalk(){ const p=FLAT[cur]; return !!p && ['read','spell','conversational'].includes(p.kind); }
+function playTake(){ if(!lastBlob)return; const a=new Audio(URL.createObjectURL(lastBlob)); a.play(); }
+
+async function saveTake(){
+  if(!lastBlob) return;
+  $('#btn-save').disabled=true; $('#btn-save').textContent='processing…';
+  const fd=new FormData();
+  const ext = lastBlob.type.includes('mp4')?'m4a':lastBlob.type.includes('ogg')?'ogg':'webm';
+  fd.append('file', lastBlob, `take.${ext}`);
+  fd.append('prompt_id', FLAT[cur].id);
+  fd.append('denoise', $('#denoise').checked? 'true':'false');
+  fd.append('source', lastIsUpload?'upload':'browser-mic');
+  try{
+    const d=await api('/api/clip',{method:'POST',body:fd});
+    showQc(d.record);
+    FLAT[cur].recorded=true; FLAT[cur].flags=d.record.qc.flags; FLAT[cur].duration=d.record.qc.duration;
+    renderTrain(d.training); await refreshProgress();
+    toast(d.record.qc.flags.length? ('saved — flagged: '+d.record.qc.flags.join(', '))
+                                   : 'saved ✓ clean');
+    if(d.training.state==='launched') toast('🚀 readiness gate met — training launched on the training host');
+  }catch(e){ toast('save failed: '+e.message, true); }
+  finally{ $('#btn-save').textContent='✓ Keep & process'; $('#btn-save').disabled=false; }
+}
+function showQc(r){
+  $('#qc').style.display='block';
+  const q=r.qc;
+  $('#qc-stats').innerHTML=[
+    ['duration', (q.duration?.toFixed(2)??'—')+'s'],
+    ['loudness', (q.loudness_lufs??'—')+' LUFS'],
+    ['peak', (q.peak_dbfs??'—')+' dBFS'],
+    ['SNR', (q.snr_db??'—')+' dB'],
+    ['denoise', q.noise_reduced?'on':'off'],
+    ['WER', q.wer==null?'n/a':(q.wer*100).toFixed(0)+'%'],
+  ].map(([k,v])=>`<div class="stat"><span>${k}</span> <b>${v}</b></div>`).join('');
+  $('#qc-flags').innerHTML = q.flags.length? q.flags.map(f=>`<span class="flag">${f}</span>`).join('')
+                                           : '<span class="flag clean">clean ✓</span>';
+  const a=$('#review'); a.src=`/api/clip/${r.id}/audio?t=`+Date.now();
+  $('#qc-transcript').textContent = r.asr_hypothesis? ('heard: "'+r.asr_hypothesis+'"'):'';
+}
+
+// ---- upload ----
+$('#up-input').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f)return;
+  lastBlob=f; lastIsUpload=true;
+  $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
+  toast('loaded '+f.name+' — Keep & process to standardize');
+});
+
+// ---- room tone ----
+async function sampleRoomTone(){
+  await ensureMic();
+  toast('recording 4s of room tone — stay silent…');
+  chunks=[]; const mime=pickMime();
+  const mr=new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
+  mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  mr.onstop=async()=>{
+    const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
+    const fd=new FormData(); fd.append('file',blob,'roomtone.webm');
+    try{ const d=await api('/api/roomtone',{method:'POST',body:fd});
+      $('#roomtone-pill').textContent=`room tone: ${d.room_tone_sec}s`; $('#roomtone-pill').className='pill on';
+      toast('room tone captured ✓ floor '+d.noise_floor_dbfs.toFixed(1)+' dBFS');
+    }catch(e){toast('room tone failed: '+e.message,true);}
+  };
+  mr.start(); setTimeout(()=>mr.stop(), 4000);
+}
+
+// ---- nav + side ----
+function go(d){ cur=(cur+d+FLAT.length)%FLAT.length; showPrompt(); }
+function nextGap(){ const n=FLAT.findIndex((p,i)=>i>cur && !p.recorded);
+  cur = n>=0? n : FLAT.findIndex(p=>!p.recorded); if(cur<0)cur=0; showPrompt(); }
+function renderSecList(){
+  $('#seclist').innerHTML = SECTIONS.map(s=>{
+    const rec=s.prompts.filter(p=>p.recorded).length;
+    return `<li data-sec="${s.section}" data-num="${s.num}">
+      <div class="top"><span>${s.section.replace('sec','§')} ${s.title.slice(0,26)}</span><span class="cnt">${rec}/${s.prompts.length}</span></div>
+      <div class="sb"><i style="width:0%"></i></div></li>`;
+  }).join('');
+  document.querySelectorAll('#seclist li').forEach(li=>li.onclick=()=>{
+    const sec=li.dataset.sec; cur=FLAT.findIndex(p=>p.section===sec); if(cur>=0)showPrompt();
+  });
+}
+function renderDots(){
+  $('#dotgrid').innerHTML = FLAT.map((p,i)=>{
+    const cls = i===cur?'dot cur':(p.flags&&p.flags.length?'dot flag':p.recorded?'dot done':'dot');
+    return `<span class="${cls}" data-i="${i}" title="${p.id}"></span>`;
+  }).join('');
+  document.querySelectorAll('.dot').forEach(d=>d.onclick=()=>{cur=+d.dataset.i;showPrompt();});
+}
+
+// ---- settings + train ----
+async function pushSettings(){
+  const fd=new FormData();
+  fd.append('auto_train',$('#auto-train').checked?'true':'false');
+  fd.append('denoise',$('#denoise').checked?'true':'false');
+  fd.append('whisper_model',$('#whisper-model').value);
+  const s=await api('/api/settings',{method:'POST',body:fd});
+  window._wm=s.whisper_model;
+  toast('settings saved — QC model: '+s.whisper_model);
+}
+async function startTraining(){
+  try{ const d=await api('/api/train',{method:'POST',body:new FormData()});
+    renderTrain(d.training); toast('training launch requested');
+  }catch(e){ toast('cannot start: '+e.message, true); }
+}
+
+// ---- wire up ----
+$('#btn-rec').onclick=toggleRec;
+$('#btn-play').onclick=playTake;
+$('#btn-save').onclick=saveTake;
+$('#btn-redo').onclick=()=>{resetTakeUI();toast('take discarded — record again');};
+$('#btn-prev').onclick=()=>go(-1);
+$('#btn-next').onclick=()=>go(1);
+$('#btn-skipnext').onclick=nextGap;
+$('#btn-roomtone').onclick=sampleRoomTone;
+$('#btn-train').onclick=startTraining;
+$('#auto-train').onchange=pushSettings;
+$('#denoise').onchange=pushSettings;
+$('#whisper-model').onchange=pushSettings;
+document.addEventListener('keydown',e=>{
+  if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(e.repeat) return;                       // ignore auto-repeat while held
+    if(isPushToTalk()){
+      if(recState!=='recording'){ pttHeld=true; pttReleasePending=false; startRec(); }
+    } else {
+      toggleRec();                             // long-form: press to start, again to stop
+    }
+  }
+  else if(e.key==='ArrowRight')go(1); else if(e.key==='ArrowLeft')go(-1);
+  else if(e.key==='Enter'&&!$('#btn-save').disabled)saveTake();
+});
+document.addEventListener('keyup',e=>{
+  if(e.code!=='Space'||!isPushToTalk()||!pttHeld)return;
+  pttHeld=false;
+  if(recState==='recording') stopRec();
+  else pttReleasePending=true;                 // released before mic finished starting
+});
+async function loadSettings(){
+  try{ const s=await api('/api/settings');
+    window._wm=s.whisper_model||'base.en';
+    $('#auto-train').checked=s.auto_train!==false;
+    $('#denoise').checked=s.denoise!==false;
+    const wm=$('#whisper-model'); if(wm) wm.value=window._wm;
+  }catch(_){}
+}
+loadSettings();
+loadScript().catch(e=>{$('#crumb').innerHTML='<span class="err">load failed: '+e.message+'</span>';});
+connectSSE();
+// Fallback poll at 60s only — SSE carries live updates; this just resyncs if the
+// stream silently dropped. Skipped while recording to keep the meter smooth.
+setInterval(()=>{ if(recState!=='recording') refreshProgress().catch(()=>{}); }, 60000);
+</script>
+</body>
+</html>

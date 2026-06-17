@@ -1,0 +1,14 @@
+# recordings & generated corpus state — never committed
+data/
+*.wav
+*.flac
+*.mp3
+*.m4a
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# os
+.DS_Store
+._*

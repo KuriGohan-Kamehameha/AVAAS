@@ -1,0 +1,20 @@
+# capture (CLI)
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24
+
+# preprocess
+librosa>=0.10.1
+pyloudnorm>=0.1.1
+noisereduce>=3.0.0
+faster-whisper>=1.0.0
+tqdm>=4.65
+
+# web studio
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+scipy>=1.11
+
+# torch (for faster-whisper backend selection; install matching variant for your hw)
+# torch>=2.2
