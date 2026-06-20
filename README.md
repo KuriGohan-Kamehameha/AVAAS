@@ -76,6 +76,12 @@ Dockerfile        container image (python3.12 + ffmpeg + deps)
 committed. AVAAS does no network calls except an optional one-time model download
 for `faster-whisper` QC.
 
+## Part of the Piranesi voice stack
+
+AVAAS is the **voice-assimilation** half. Its sibling is **[wakeword-training](https://github.com/P1R4N351/wakeword-training)** — a Docker-first [openWakeWord](https://github.com/dscripka/openWakeWord) trainer that turns a wake phrase into a `tflite`/`onnx` detector for edge devices.
+
+They connect end to end: **AVAAS assimilates the voice → wakeword-training detects its wake phrase.** A voice cloned in AVAAS can synthesize personalized positive samples of the wake phrase, so the detector is tuned to that specific speaker rather than generic TTS voices.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
