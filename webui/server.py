@@ -23,6 +23,7 @@ import asyncio
 import json
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import AsyncIterator
 
@@ -105,7 +106,9 @@ def _write_settings(data: dict) -> None:
 def _startup() -> None:
     global _EVENT_LOOP
     _load_sections()
-    assert _SECTIONS, "no sections parsed from RECORDING-SCRIPT.md"
+    if not _SECTIONS:
+        raise RuntimeError("no structured prompt sections compiled")
+    corpus.initialize(ROOT, _SECTIONS)
     _EVENT_LOOP = asyncio.get_event_loop()
     qc_transcribe.configure(_read_settings().get("whisper_model", "base.en"))
 
@@ -207,8 +210,9 @@ def api_clip(prompt_id: str = Form(...),
         raise HTTPException(404, f"unknown prompt_id {prompt_id}")
 
     tmp = _save_upload(file)
-    raw_out = ROOT / "data" / "raw" / f"{prompt_id}_{prompt['slug']}.wav"
-    proc_out = ROOT / "data" / "processed" / f"{prompt_id}_{prompt['slug']}.wav"
+    capture_id = uuid.uuid4().hex
+    raw_out = ROOT / "data" / "raw" / f"{prompt_id}_{capture_id}_{prompt['slug']}.wav"
+    proc_out = ROOT / "data" / "processed" / f"{prompt_id}_{capture_id}_{prompt['slug']}.wav"
     try:
         qc = processing.standardize(tmp, raw_out, proc_out,
                                     room_tone=self_or_none(denoise, _room_tone()),
@@ -230,6 +234,11 @@ def api_clip(prompt_id: str = Form(...),
     record = {
         "id": prompt_id, "section": prompt["section"], "idx": prompt["idx"],
         "kind": prompt["kind"], "prompt_text": prompt["text"],
+        "corpus_version": prompt["corpus_version"],
+        "speaker_id": prompt["speaker_id"],
+        "voice_model_id": prompt["voice_model_id"],
+        "identity": prompt["identity"],
+        "prompt_source": prompt["source"],
         "raw_path": str(raw_out.relative_to(ROOT)),
         "processed_path": str(proc_out.relative_to(ROOT)),
         "transcript": transcript, "asr_hypothesis": hyp,
@@ -265,26 +274,11 @@ def api_clip_delete(prompt_id: str) -> JSONResponse:
     rec = {r["id"]: r for r in records}.get(prompt_id)
     if rec is None:
         raise HTTPException(404, "no such clip")
-    for key in ("raw_path", "processed_path"):
-        fp = ROOT / rec[key]
-        fp.unlink(missing_ok=True)
-    remaining = [r for r in records if r["id"] != prompt_id]
-    _rewrite_manifest(remaining)
+    corpus.tombstone_record(ROOT, prompt_id, reason="studio retake requested")
     _emit_threadsafe({"type": "state", "deleted": prompt_id,
                       "progress": corpus.progress(ROOT, _SECTIONS)})
     return JSONResponse({"deleted": prompt_id,
                          "progress": corpus.progress(ROOT, _SECTIONS)})
-
-
-def _rewrite_manifest(records: list[dict]) -> None:
-    import json
-    mpath = ROOT / "data" / "processed" / "manifest.jsonl"
-    tmp = mpath.with_suffix(".jsonl.tmp")
-    with open(tmp, "w") as fp:
-        for r in records:
-            fp.write(json.dumps(r) + "\n")
-    tmp.replace(mpath)
-
 
 # --------------------------------------------------------------------------- #
 # room tone + training + settings
