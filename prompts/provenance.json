@@ -1,0 +1,54 @@
+{
+  "schema": "avaas/prompt-provenance@v1",
+  "corpus_version": "2026.07.16",
+  "sources": [
+    {
+      "id": "harvard_100",
+      "path": "corpora/harvard_100.txt",
+      "expected_lines": 100,
+      "sha256": "eb79c0bfadc4b3988ee7caa343b84691c2ae1ded100f61fdb6966ef5b5bb9c72",
+      "source_url": "https://www.cs.columbia.edu/~hgs/audio/harvard.html",
+      "source_sha256": "85c3fb1e9ec6bcce9128998eb5263ecbf1e51cb12dd9a869ccc6b2f243b176d8",
+      "source_revision": "sha256:85c3fb1e9ec6bcce9128998eb5263ecbf1e51cb12dd9a869ccc6b2f243b176d8",
+      "selection": "Lists 1 through 10 in source order; ten sentences per list",
+      "license_name": "No redistribution license asserted; source materialized only for authorized recording use",
+      "license_url": "https://doi.org/10.1109/IEEESTD.1969.7405210",
+      "distribution_restrictions": "Do not commit, publish, or redistribute the derived sentence file; materialize it from the pinned source only where its use is authorized.",
+      "materialization": "build-only",
+      "redistribution_allowed": false,
+      "required": true
+    },
+    {
+      "id": "cmu_arctic_400",
+      "path": "corpora/cmu_arctic_400.txt",
+      "expected_lines": 400,
+      "sha256": "58f6d9d3e2d7d8d836eb3a2d7eb36ebff824657e6ba5191099891aaa8f87de25",
+      "source_url": "https://raw.githubusercontent.com/festvox/festvox/cb88bfffc43c2e322ad65b2fb56bcb6d1d38814d/src/vox_files/prompts/cmuarctic.data",
+      "upstream_url": "http://festvox.org/cmu_arctic/cmuarctic.data",
+      "source_sha256": "60e3d9a4dc33732c9100baadd747312bdc1a200fc891766507397289753a25c7",
+      "source_revision": "festvox/festvox@cb88bfffc43c2e322ad65b2fb56bcb6d1d38814d",
+      "selection": "The first 400 physical records in the official 1132-record source, with Scheme wrappers removed, surrounding whitespace normalized, and text order preserved",
+      "license_name": "FestVox permissive license (Carnegie Mellon University, Alan W Black, and Kevin A. Lenzo)",
+      "license_url": "https://raw.githubusercontent.com/festvox/festvox/cb88bfffc43c2e322ad65b2fb56bcb6d1d38814d/COPYING",
+      "distribution_restrictions": "Retain the copyright, conditions, disclaimer, modification marks, and author attribution; do not use author names for endorsement.",
+      "materialization": "checked-in",
+      "redistribution_allowed": true,
+      "required": true
+    },
+    {
+      "id": "avaas_local",
+      "path": "catalog.json",
+      "expected_records": 364,
+      "sha256": "939172b760f9ba57f6e0b72afad2f40d6d285bb7863f29257f264b33d4898c71",
+      "source_revision": "avaas/prompt-catalog@v1:2026.07.16",
+      "source_url": "https://github.com/KuriGohan-Kamehameha/AVAAS",
+      "selection": "All structured AVAAS phone, number, name, spelling, alphabet, conversational, spontaneous, identity, and edge-case prompts",
+      "license_name": "MIT",
+      "license_url": "https://opensource.org/license/mit",
+      "distribution_restrictions": "None beyond the MIT notice for AVAAS-authored prompt text.",
+      "materialization": "checked-in",
+      "redistribution_allowed": true,
+      "required": true
+    }
+  ]
+}

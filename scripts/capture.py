@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Interactive recording helper for Alex's voice corpus.
+"""Interactive recording helper for the canonical Satraj/Piranesi corpus.
 
-Parses RECORDING-SCRIPT.md, presents each scripted line one at a time, records
-until you press Enter, and saves to data/raw/{section}_{idx:03d}_{slug}.wav.
+Consumes the same structured compiler as the studio, presents each line one at
+a time, and saves to data/raw/{canonical_prompt_id}_{slug}.wav.
 
-Resumes automatically by skipping any (section, idx) that already has a file.
+Resumes automatically by skipping any canonical prompt ID already recorded.
 
 Controls per take:
   Enter    start recording  → Enter    stop recording
@@ -15,44 +15,22 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Iterator
-
-import numpy as np
-import sounddevice as sd
-import soundfile as sf
+from typing import Any, Iterator
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_FILE = ROOT / "RECORDING-SCRIPT.md"
 RAW_DIR = ROOT / "data" / "raw"
 SAMPLE_RATE = 48_000  # capture at 48k, downsample in preprocess
 
-SECTION_RE = re.compile(r"^## Section (\d+):\s+(.+?)(?:\s+—|\s+\(|$)")
-SUBSECTION_RE = re.compile(r"^### (\d+)([a-z])\.")
-ITEM_RE = re.compile(r"^(\d+)\.\s+(.+?)$")
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from webui.prompts import compile_prompts  # noqa: E402
 
 
-def parse_script(path: Path) -> Iterator[tuple[str, int, str]]:
-    """Yield (section_slug, line_idx, text) for every scripted, numbered line."""
-    section: str | None = None
-    in_code = False
-    for raw in path.read_text().splitlines():
-        line = raw.rstrip()
-        m = SECTION_RE.match(line)
-        if m:
-            section = f"sec{int(m.group(1)):02d}"
-            continue
-        sm = SUBSECTION_RE.match(line)
-        if sm:
-            section = f"sec{int(sm.group(1)):02d}{sm.group(2)}"
-            continue
-        if line.lstrip().startswith("```"):
-            in_code = not in_code
-            continue
-        if not in_code or not section:
-            continue
-        im = ITEM_RE.match(line.strip())
-        if im:
-            yield section, int(im.group(1)), im.group(2).rstrip()
+def parse_script(_path: Path | None = None) -> Iterator[tuple[str, str, str]]:
+    """Yield (section, canonical_prompt_id, text) from the authoritative compiler."""
+    for prompt in compile_prompts(ROOT):
+        yield prompt["section"], prompt["id"], prompt["text"]
 
 
 def slug(text: str, n: int = 40) -> str:
@@ -60,11 +38,14 @@ def slug(text: str, n: int = 40) -> str:
     return s[:n] or "line"
 
 
-def already_recorded(section: str, idx: int) -> bool:
-    return any(RAW_DIR.glob(f"{section}_{idx:03d}_*.wav"))
+def already_recorded(prompt_id: str) -> bool:
+    return any(RAW_DIR.glob(f"{prompt_id}_*.wav"))
 
 
-def record_take(prompt: str) -> np.ndarray:
+def record_take(prompt: str) -> Any:
+    import numpy as np
+    import sounddevice as sd
+
     print(f"\n  >>> {prompt}")
     input("      [Enter to start] ")
     frames: list[np.ndarray] = []
@@ -88,11 +69,7 @@ def main() -> int:
     args = ap.parse_args()
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    if not SCRIPT_FILE.exists():
-        print(f"missing: {SCRIPT_FILE}", file=sys.stderr)
-        return 1
-
-    items = list(parse_script(SCRIPT_FILE))
+    items = list(parse_script())
     if args.section:
         items = [t for t in items if t[0].startswith(args.section)]
     if not items:
@@ -100,26 +77,28 @@ def main() -> int:
         return 1
 
     if args.list:
-        for sec, idx, text in items:
-            mark = "✓" if already_recorded(sec, idx) else " "
-            print(f"  [{mark}] {sec}_{idx:03d}  {text[:70]}")
-        done = sum(1 for s, i, _ in items if already_recorded(s, i))
+        for _section, prompt_id, text in items:
+            mark = "✓" if already_recorded(prompt_id) else " "
+            print(f"  [{mark}] {prompt_id}  {text[:70]}")
+        done = sum(1 for _, prompt_id, _ in items if already_recorded(prompt_id))
         print(f"\n{done}/{len(items)} recorded")
         return 0
 
     try:
+        import sounddevice as sd
+
         info = sd.query_devices(sd.default.device[0], "input")
         print(f"Recording from: {info['name']}  ({SAMPLE_RATE} Hz, mono)")
     except Exception as e:
         print(f"Audio device error: {e}", file=sys.stderr)
         return 1
 
-    done = sum(1 for s, i, _ in items if already_recorded(s, i))
+    done = sum(1 for _, prompt_id, _ in items if already_recorded(prompt_id))
     print(f"\nSession: {len(items)} lines, {done} already done.")
     print("Per take: Enter=keep  r=redo  s=skip  q=quit\n")
 
-    for sec, idx, text in items:
-        if already_recorded(sec, idx):
+    for _section, prompt_id, text in items:
+        if already_recorded(prompt_id):
             continue
         while True:
             audio = record_take(text)
@@ -131,7 +110,9 @@ def main() -> int:
                 break
             if choice == "r":
                 continue
-            out = RAW_DIR / f"{sec}_{idx:03d}_{slug(text)}.wav"
+            import soundfile as sf
+
+            out = RAW_DIR / f"{prompt_id}_{slug(text)}.wav"
             sf.write(out, audio, SAMPLE_RATE, subtype="PCM_16")
             print(f"      ✓ saved {out.name}")
             break

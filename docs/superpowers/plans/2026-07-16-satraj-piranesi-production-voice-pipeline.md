@@ -51,13 +51,16 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 
 - Create: `prompts/identities.json`
 - Create: `prompts/catalog.json`
-- Create: `prompts/corpora/harvard_100.txt`
+- Materialize at build/runtime only: `prompts/corpora/harvard_100.txt`
 - Create: `prompts/corpora/cmu_arctic_400.txt`
 - Create: `prompts/provenance.json`
+- Create: `scripts/materialize_prompt_corpora.py`
+- Create: `tests/test_capture_cli.py`, `tests/test_container_contract.py`, `tests/test_container_smoke.py`
+- Modify: `.dockerignore`, `.gitignore`, `Dockerfile`, `scripts/capture.py`
 - Create: `webui/prompts.py`
 - Create: `tests/test_prompts.py`
 - Modify: `webui/script_parser.py`
-- Generate: `RECORDING-SCRIPT.md`
+- Generate locally/container-only (Git-ignored): `RECORDING-SCRIPT.md`
 
 - [ ] Write failing tests for schema/version enforcement, exact source counts, source SHA-256, stable IDs, grouped identity pairs, required name/spelling/introduction/voicemail/phone/wakeword material, and absence of standalone user-facing `Sat`.
 - [ ] Run `pytest -q tests/test_prompts.py`; expect collection/import failure for `webui.prompts`.
@@ -78,6 +81,7 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Create: `tests/test_store.py`
 - Create: `tests/test_migration.py`
 - Modify: `webui/corpus.py`
+- Modify: `webui/server.py` (register prompt snapshots at startup; tombstone through the store)
 
 - [ ] Write failing tests for WAL/FULL/foreign-key pragmas, ordered idempotent migrations, immutable takes, a single accepted pointer per prompt, acceptance audit history, tombstones, concurrent retakes, crash rollback, checksum validation, JSONL export, SQLite backup/restore, and bounded legacy manifest import.
 - [ ] Run `pytest -q tests/test_store.py tests/test_migration.py`; expect missing `webui.store`.
@@ -100,6 +104,7 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Create: `tests/test_qc.py`
 - Modify: `webui/processing.py`
 - Modify: `webui/qc_transcribe.py`
+- Modify: `webui/server.py` (bounded multipart ingest and room-tone integration)
 
 - [ ] Write failing adversarial tests for chunked upload ceilings, slow upload deadline, malformed codecs/WAV, compressed and decoded oversize, path traversal, NaN/Inf, silence, clipping, extreme duration, wrong rate/channel/subtype, disconnect cleanup, and a simulated crash after each transaction stage.
 - [ ] Write golden tests for 48 kHz PCM16 master, 22,050 Hz Piper derivative, 24 kHz serving derivative, and 16 kHz wake derivative; assert sample format, finite samples, duration tolerance, hashes/parameters, and no source overwrite.

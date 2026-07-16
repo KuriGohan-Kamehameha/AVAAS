@@ -22,8 +22,8 @@ on the server you run — **your recordings never leave your machine.**
 - **Optional speech QC** — if [`faster-whisper`](https://github.com/SYSTRAN/faster-whisper)
   is installed, each take is transcribed and word-error-rate checked against the prompt;
   degrades gracefully (QC skipped) if the model is unavailable.
-- **A structured prompt corpus** — `RECORDING-SCRIPT.md` ships a ready-to-use template
-  (~90–110 min across 12 sections) biased toward phone-call distribution: greetings,
+- **A structured prompt corpus** — a locally generated `RECORDING-SCRIPT.md` presents
+  932 prompts across 13 sections, biased toward phone-call distribution: greetings,
   numbers, names, hold phrases, dialogues, plus Harvard / CMU-ARCTIC prose for phonetic
   and prosodic coverage.
 - **Progress + readiness gate** — per-section progress, a manifest of every take, and a
@@ -50,15 +50,34 @@ docker run -d --name avaas --restart unless-stopped \
 ```sh
 python3.12 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt        # plus a system ffmpeg
+python scripts/materialize_prompt_corpora.py --fetch
+python -m webui.prompts --write
 uvicorn webui.server:app --host 127.0.0.1 --port 8731
 ```
 
 ## Using the recording script
 
-`RECORDING-SCRIPT.md` is a **template** that uses the placeholder name `Alex` and a
-`SPEAKER:` marker for dialogue turns. Replace those with your own name, then read the
-prompts in order. The parser (`webui/script_parser.py`) turns it into the in-browser
-prompt list, so you can edit / extend the script freely and the studio follows.
+The authoritative declarations live under `prompts/`. They compile one human
+speaker (`satraj`) into a shared `satraj-piranesi` model corpus with paired Satraj and
+Piranesi identity lines. `RECORDING-SCRIPT.md` is generated for humans; change the
+structured catalog and run `python -m webui.prompts --write` rather than editing the
+Markdown. The complete view is ignored by Git because it includes a build-only corpus;
+CI materializes it locally, generates it, then uses `python -m webui.prompts --check`
+to reject drift.
+
+The Harvard-derived portion is deliberately absent from Git because AVAAS does
+not assert redistribution rights for it. Local and container builds download the
+exact pinned source, verify its hash, extract lists 1–10 within fixed bounds, and
+verify the derived hash. Do not publish a built image containing that material
+unless you have separately confirmed that distribution is authorized.
+
+To run the local verification suite from a fresh checkout:
+
+```sh
+python scripts/materialize_prompt_corpora.py --fetch
+python -m webui.prompts --write
+pytest -q
+```
 
 ## Layout
 

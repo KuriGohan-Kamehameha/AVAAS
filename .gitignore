@@ -1,5 +1,9 @@
 # recordings & generated corpus state — never committed
 data/
+# Materialized only during authorized local/container builds; see provenance.json.
+prompts/corpora/harvard_100.txt
+# Complete generated view may contain build-only prompt material.
+RECORDING-SCRIPT.md
 *.wav
 *.flac
 *.mp3

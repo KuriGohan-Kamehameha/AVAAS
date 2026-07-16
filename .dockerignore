@@ -1,0 +1,7 @@
+.git
+.pytest_cache
+.superpowers
+__pycache__
+data
+prompts/corpora/harvard_100.txt
+RECORDING-SCRIPT.md

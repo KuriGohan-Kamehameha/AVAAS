@@ -1,0 +1,2444 @@
+{
+  "schema": "avaas/prompt-catalog@v1",
+  "corpus_version": "2026.07.16",
+  "sections": [
+    {
+      "section": "sec01",
+      "num": 1,
+      "title": "Harvard Sentences (Sets 1–10)",
+      "target_min": 8.0,
+      "source_id": "harvard_100",
+      "kind": "read",
+      "id_prefix": "sec01"
+    },
+    {
+      "section": "sec02",
+      "num": 2,
+      "title": "CMU ARCTIC (first 400)",
+      "target_min": 30.0,
+      "source_id": "cmu_arctic_400",
+      "kind": "read",
+      "id_prefix": "sec02"
+    },
+    {
+      "section": "sec03",
+      "num": 3,
+      "title": "Phone-call greetings & openers (30 lines)",
+      "target_min": 3.0,
+      "prompts": [
+        {
+          "id": "sec03_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hello, this is {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, {display_name} speaking.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello?"
+        },
+        {
+          "id": "sec03_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Yeah, this is {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, you've reached {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "{display_name} here.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hello, {display_name} speaking, how can I help?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Good morning, this is {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Good afternoon, {display_name} speaking.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello — sorry, give me one second."
+        },
+        {
+          "id": "sec03_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi there, this is {display_name} — go ahead.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "{display_name}, who's this?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello? Hi, yeah."
+        },
+        {
+          "id": "sec03_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, sorry — {display_name} speaking.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Yeah hello, this is {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_016",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "{display_name} speaking, can you hear me okay?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_017",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hi — yes, this is he."
+        },
+        {
+          "id": "sec03_018",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Speaking."
+        },
+        {
+          "id": "sec03_019",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, {display_name} — what's up?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_020",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello — one sec, let me get somewhere quieter."
+        },
+        {
+          "id": "sec03_021",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hi, yeah, you've got me."
+        },
+        {
+          "id": "sec03_022",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hello, this is {display_name} — is everything okay?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_023",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi — {display_name}, go ahead.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_024",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hello? Yep, this is {display_name}.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_025",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hi there."
+        },
+        {
+          "id": "sec03_026",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "{display_name}, hi — how are you?",
+          "identity_variants": true
+        },
+        {
+          "id": "sec03_027",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello, thanks for calling back."
+        },
+        {
+          "id": "sec03_028",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hi, yeah — sorry I missed your call earlier."
+        },
+        {
+          "id": "sec03_029",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hello? Sorry, bad signal — try me again?"
+        },
+        {
+          "id": "sec03_030",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, this is {display_name} — what can I do for you?",
+          "identity_variants": true
+        }
+      ]
+    },
+    {
+      "section": "sec04",
+      "num": 4,
+      "title": "Common phone phrases (40 lines)",
+      "target_min": 5.0,
+      "prompts": [
+        {
+          "id": "sec04_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can you spell that for me?"
+        },
+        {
+          "id": "sec04_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry, can you say that again?"
+        },
+        {
+          "id": "sec04_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Let me grab a pen."
+        },
+        {
+          "id": "sec04_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "One moment please."
+        },
+        {
+          "id": "sec04_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can you hold for a second?"
+        },
+        {
+          "id": "sec04_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm going to put you on hold briefly."
+        },
+        {
+          "id": "sec04_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thanks for waiting."
+        },
+        {
+          "id": "sec04_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry to keep you waiting."
+        },
+        {
+          "id": "sec04_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can I take a message?"
+        },
+        {
+          "id": "sec04_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can I get your number and have someone call you back?"
+        },
+        {
+          "id": "sec04_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "What's the best number to reach you on?"
+        },
+        {
+          "id": "sec04_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can you repeat the last part?"
+        },
+        {
+          "id": "sec04_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry, you cut out for a second."
+        },
+        {
+          "id": "sec04_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The line's a bit crunchy — can you say that again?"
+        },
+        {
+          "id": "sec04_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm going to need to check on that and get back to you."
+        },
+        {
+          "id": "sec04_016",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Let me transfer you to someone who can help."
+        },
+        {
+          "id": "sec04_017",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Bear with me a moment."
+        },
+        {
+          "id": "sec04_018",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Could you confirm your full name for me?"
+        },
+        {
+          "id": "sec04_019",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "And what's the reason for your call today?"
+        },
+        {
+          "id": "sec04_020",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Is there anything else I can help you with?"
+        },
+        {
+          "id": "sec04_021",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thanks for calling, have a good one."
+        },
+        {
+          "id": "sec04_022",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Talk soon."
+        },
+        {
+          "id": "sec04_023",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Bye for now."
+        },
+        {
+          "id": "sec04_024",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thanks, bye."
+        },
+        {
+          "id": "sec04_025",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Alright, take care."
+        },
+        {
+          "id": "sec04_026",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sounds good, talk later."
+        },
+        {
+          "id": "sec04_027",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Okay, perfect."
+        },
+        {
+          "id": "sec04_028",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Got it."
+        },
+        {
+          "id": "sec04_029",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Understood."
+        },
+        {
+          "id": "sec04_030",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That makes sense."
+        },
+        {
+          "id": "sec04_031",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Let me look into it and circle back."
+        },
+        {
+          "id": "sec04_032",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'll send you an email after this call to confirm."
+        },
+        {
+          "id": "sec04_033",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Could you email me that as well, just so I have a record?"
+        },
+        {
+          "id": "sec04_034",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Yes, that works for me."
+        },
+        {
+          "id": "sec04_035",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "No, that won't work, unfortunately."
+        },
+        {
+          "id": "sec04_036",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can we move it to a different time?"
+        },
+        {
+          "id": "sec04_037",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm sorry, I'm not able to help with that."
+        },
+        {
+          "id": "sec04_038",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That's a question for a different team — let me find you the right person."
+        },
+        {
+          "id": "sec04_039",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'll need to escalate this — what's the best way to reach you tomorrow?"
+        },
+        {
+          "id": "sec04_040",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Apologies for the confusion."
+        }
+      ]
+    },
+    {
+      "section": "sec05",
+      "num": 5,
+      "title": "Numbers in context (60 lines)",
+      "target_min": 7.0,
+      "prompts": [
+        {
+          "id": "sec05a_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "My number is four one five, five five five, oh one three two."
+        },
+        {
+          "id": "sec05a_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You can reach me at two oh two, five five five, eight nine one one."
+        },
+        {
+          "id": "sec05a_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The office line is six four six, five five five, twelve hundred."
+        },
+        {
+          "id": "sec05a_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Try eight hundred, five five five, ninety-eight seventy-six."
+        },
+        {
+          "id": "sec05a_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Mobile is plus four four, seven seven hundred, nine hundred thousand."
+        },
+        {
+          "id": "sec05a_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Extension is two two seven."
+        },
+        {
+          "id": "sec05a_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Press one for English, two para español."
+        },
+        {
+          "id": "sec05a_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Dial nine to get an outside line."
+        },
+        {
+          "id": "sec05a_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "My fax — yes, fax — is three oh five, five five five, four four four four."
+        },
+        {
+          "id": "sec05a_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Country code plus eight one, then three, then five five five five, six six six six."
+        },
+        {
+          "id": "sec05a_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The toll-free is one eight six six, five five five, zero one two three."
+        },
+        {
+          "id": "sec05a_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'll text it to you: four one five, two zero two, ninety-eight oh four."
+        },
+        {
+          "id": "sec05a_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The conference bridge is eight five five, five five five, two two two two, code nine eight seven six five four."
+        },
+        {
+          "id": "sec05a_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "International code is plus one for US and Canada."
+        },
+        {
+          "id": "sec05a_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The shortcode is four seven six four seven."
+        },
+        {
+          "id": "sec05b_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Forty-seven thirty-two Mission Street."
+        },
+        {
+          "id": "sec05b_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Twelve fifty Sixth Avenue, apartment four B."
+        },
+        {
+          "id": "sec05b_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Suite three hundred."
+        },
+        {
+          "id": "sec05b_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The address is one hundred Main Street, Cambridge, Mass."
+        },
+        {
+          "id": "sec05b_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Twenty-eight forty Pine, unit six."
+        },
+        {
+          "id": "sec05b_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Number seven, Willow Lane."
+        },
+        {
+          "id": "sec05b_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The zip is nine four one one zero."
+        },
+        {
+          "id": "sec05b_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Postcode is W one A, one A A."
+        },
+        {
+          "id": "sec05b_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The corner of Twenty-third and Valencia."
+        },
+        {
+          "id": "sec05b_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Building eight, floor twelve."
+        },
+        {
+          "id": "sec05b_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "PO Box one four three two, San Francisco."
+        },
+        {
+          "id": "sec05b_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sixteen Elm Court, that's E L M."
+        },
+        {
+          "id": "sec05b_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The unit number is seventeen oh six."
+        },
+        {
+          "id": "sec05b_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Cross street is Folsom."
+        },
+        {
+          "id": "sec05b_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "It's the third house on the left after the stop sign."
+        },
+        {
+          "id": "sec05c_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thursday, March twelfth."
+        },
+        {
+          "id": "sec05c_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "April second, twenty twenty-six."
+        },
+        {
+          "id": "sec05c_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The seventeenth at three pm."
+        },
+        {
+          "id": "sec05c_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Quarter past four."
+        },
+        {
+          "id": "sec05c_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Half past seven."
+        },
+        {
+          "id": "sec05c_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Nine thirty in the morning."
+        },
+        {
+          "id": "sec05c_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Twenty-two hundred hours."
+        },
+        {
+          "id": "sec05c_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sometime after lunch, maybe two-ish."
+        },
+        {
+          "id": "sec05c_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "End of business tomorrow."
+        },
+        {
+          "id": "sec05c_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "By close of play Friday."
+        },
+        {
+          "id": "sec05c_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The first of next month."
+        },
+        {
+          "id": "sec05c_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "A week from Tuesday."
+        },
+        {
+          "id": "sec05c_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Christmas Eve."
+        },
+        {
+          "id": "sec05c_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "New Year's Day."
+        },
+        {
+          "id": "sec05c_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The third Wednesday of every month."
+        },
+        {
+          "id": "sec05d_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Twelve dollars and forty-seven cents."
+        },
+        {
+          "id": "sec05d_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "A thousand bucks even."
+        },
+        {
+          "id": "sec05d_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Two point five million."
+        },
+        {
+          "id": "sec05d_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Three hundred grand."
+        },
+        {
+          "id": "sec05d_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Forty-nine ninety-nine."
+        },
+        {
+          "id": "sec05d_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Twenty quid."
+        },
+        {
+          "id": "sec05d_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "My confirmation code is alpha four seven gamma nine."
+        },
+        {
+          "id": "sec05d_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Order number is W X seven seven two one zero."
+        },
+        {
+          "id": "sec05d_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Reference: bravo bravo dash eight oh four."
+        },
+        {
+          "id": "sec05d_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Tracking number one Z, nine nine nine, A A A, ten, one two three, four five six, seven eight nine zero."
+        },
+        {
+          "id": "sec05d_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "License plate eight K Z U, six six four."
+        },
+        {
+          "id": "sec05d_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "The PIN is two four six eight."
+        },
+        {
+          "id": "sec05d_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Last four of my social are four four three two."
+        },
+        {
+          "id": "sec05d_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "My account ends in nine eight seven six."
+        },
+        {
+          "id": "sec05d_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Verification code seven nine one three four two."
+        }
+      ]
+    },
+    {
+      "section": "sec06",
+      "num": 6,
+      "title": "Names & spelling (40 lines)",
+      "target_min": 5.0,
+      "prompts": [
+        {
+          "id": "sec06c_001",
+          "kind": "spell",
+          "source": "avaas_local",
+          "template": "{display_name} — A, L, E, X.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec06c_002",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Anjali — A, N, J, A, L, I."
+        },
+        {
+          "id": "sec06c_003",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Iyer — I, Y, E, R."
+        },
+        {
+          "id": "sec06c_004",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Chen — C, H, E, N."
+        },
+        {
+          "id": "sec06c_005",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "O'Brien — O, apostrophe, B, R, I, E, N."
+        },
+        {
+          "id": "sec06c_006",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Schmidt — S, C, H, M, I, D, T."
+        },
+        {
+          "id": "sec06c_007",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Nguyen — N, G, U, Y, E, N."
+        },
+        {
+          "id": "sec06c_008",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Müller — M, U with umlaut, L, L, E, R."
+        },
+        {
+          "id": "sec06c_009",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Caoimhín — C, A, O, I, M, H, I with fada, N."
+        },
+        {
+          "id": "sec06c_010",
+          "kind": "spell",
+          "source": "avaas_local",
+          "text": "Søren — S, O with slash, R, E, N."
+        },
+        {
+          "id": "sec06a_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "James"
+        },
+        {
+          "id": "sec06a_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Mary"
+        },
+        {
+          "id": "sec06a_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "John"
+        },
+        {
+          "id": "sec06a_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Patricia"
+        },
+        {
+          "id": "sec06a_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Robert"
+        },
+        {
+          "id": "sec06a_016",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Jennifer"
+        },
+        {
+          "id": "sec06a_017",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Michael"
+        },
+        {
+          "id": "sec06a_018",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Linda"
+        },
+        {
+          "id": "sec06a_019",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "William"
+        },
+        {
+          "id": "sec06a_020",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Elizabeth"
+        },
+        {
+          "id": "sec06a_021",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "David"
+        },
+        {
+          "id": "sec06a_022",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Barbara"
+        },
+        {
+          "id": "sec06a_023",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Richard"
+        },
+        {
+          "id": "sec06a_024",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Susan"
+        },
+        {
+          "id": "sec06a_025",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Joseph"
+        },
+        {
+          "id": "sec06a_026",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Jessica"
+        },
+        {
+          "id": "sec06a_027",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thomas"
+        },
+        {
+          "id": "sec06a_028",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sarah"
+        },
+        {
+          "id": "sec06a_029",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Christopher"
+        },
+        {
+          "id": "sec06a_030",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Karen"
+        },
+        {
+          "id": "sec06b_031",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Smith"
+        },
+        {
+          "id": "sec06b_032",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Johnson"
+        },
+        {
+          "id": "sec06b_033",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Williams"
+        },
+        {
+          "id": "sec06b_034",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Brown"
+        },
+        {
+          "id": "sec06b_035",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Jones"
+        },
+        {
+          "id": "sec06b_036",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Garcia"
+        },
+        {
+          "id": "sec06b_037",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Miller"
+        },
+        {
+          "id": "sec06b_038",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Davis"
+        },
+        {
+          "id": "sec06b_039",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Rodriguez"
+        },
+        {
+          "id": "sec06b_040",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Martinez"
+        }
+      ]
+    },
+    {
+      "section": "sec07",
+      "num": 7,
+      "title": "Alphabet drills (4 takes)",
+      "target_min": 2.0,
+      "prompts": [
+        {
+          "id": "sec07_001",
+          "kind": "take",
+          "source": "avaas_local",
+          "text": "Take 1 (NATO phonetic, normal pace): Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliet, Kilo, Lima, Mike, November, Oscar, Papa, Quebec, Romeo, Sierra, Tango, Uniform, Victor, Whiskey, X-ray, Yankee, Zulu."
+        },
+        {
+          "id": "sec07_002",
+          "kind": "take",
+          "source": "avaas_local",
+          "text": "Take 2 (Plain letters, slow + deliberate): A. B. C. D. E. F. G. H. I. J. K. L. M. N. O. P. Q. R. S. T. U. V. W. X. Y. Z."
+        },
+        {
+          "id": "sec07_003",
+          "kind": "take",
+          "source": "avaas_local",
+          "text": "Take 3 (Plain letters, conversational pace): A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z."
+        },
+        {
+          "id": "sec07_004",
+          "kind": "take",
+          "source": "avaas_local",
+          "text": "Take 4 (Digits 0–9, both ways): Zero, one, two, three, four, five, six, seven, eight, nine. Oh, one, two, three, four, five, six, seven, eight, nine."
+        }
+      ]
+    },
+    {
+      "section": "sec08",
+      "num": 8,
+      "title": "Questions & confirmations (60 lines)",
+      "target_min": 6.0,
+      "prompts": [
+        {
+          "id": "sec08a_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Did you get my email?"
+        },
+        {
+          "id": "sec08a_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Is now a good time?"
+        },
+        {
+          "id": "sec08a_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can you hear me okay?"
+        },
+        {
+          "id": "sec08a_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Are you still there?"
+        },
+        {
+          "id": "sec08a_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Does that work for you?"
+        },
+        {
+          "id": "sec08a_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Is that the right number?"
+        },
+        {
+          "id": "sec08a_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Did I catch you at a bad time?"
+        },
+        {
+          "id": "sec08a_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Could we move this to Monday?"
+        },
+        {
+          "id": "sec08a_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Should I send it to your work email or personal?"
+        },
+        {
+          "id": "sec08a_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Have you spoken to her about it yet?"
+        },
+        {
+          "id": "sec08a_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Is everyone on the call?"
+        },
+        {
+          "id": "sec08a_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Did the package arrive?"
+        },
+        {
+          "id": "sec08a_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Are we good?"
+        },
+        {
+          "id": "sec08a_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can I follow up later this week?"
+        },
+        {
+          "id": "sec08a_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Would you mind sending that over in writing?"
+        },
+        {
+          "id": "sec08a_016",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Did anything else come up?"
+        },
+        {
+          "id": "sec08a_017",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Is there a deadline I should know about?"
+        },
+        {
+          "id": "sec08a_018",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Can we loop in someone from finance?"
+        },
+        {
+          "id": "sec08a_019",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Was that figure before or after tax?"
+        },
+        {
+          "id": "sec08a_020",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Did you want me to handle it from here?"
+        },
+        {
+          "id": "sec08b_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That works, doesn't it?"
+        },
+        {
+          "id": "sec08b_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You're available Thursday, right?"
+        },
+        {
+          "id": "sec08b_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "They confirmed already, didn't they?"
+        },
+        {
+          "id": "sec08b_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You got the file, didn't you?"
+        },
+        {
+          "id": "sec08b_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "It's the same as last time, isn't it?"
+        },
+        {
+          "id": "sec08b_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "We agreed on the third, right?"
+        },
+        {
+          "id": "sec08b_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You're not coming in tomorrow, are you?"
+        },
+        {
+          "id": "sec08b_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "She mentioned that, didn't she?"
+        },
+        {
+          "id": "sec08b_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "It's billed monthly, not annually, right?"
+        },
+        {
+          "id": "sec08b_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You don't need me on this one, do you?"
+        },
+        {
+          "id": "sec08c_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Yes, that's right."
+        },
+        {
+          "id": "sec08c_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Yep, exactly."
+        },
+        {
+          "id": "sec08c_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Correct."
+        },
+        {
+          "id": "sec08c_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That's the one."
+        },
+        {
+          "id": "sec08c_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Got it, thanks."
+        },
+        {
+          "id": "sec08c_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Mm-hmm, makes sense."
+        },
+        {
+          "id": "sec08c_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sure thing."
+        },
+        {
+          "id": "sec08c_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "No problem."
+        },
+        {
+          "id": "sec08c_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Absolutely."
+        },
+        {
+          "id": "sec08c_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Of course."
+        },
+        {
+          "id": "sec08c_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sounds good to me."
+        },
+        {
+          "id": "sec08c_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Yeah, I'm on board."
+        },
+        {
+          "id": "sec08c_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm with you."
+        },
+        {
+          "id": "sec08c_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Roger that."
+        },
+        {
+          "id": "sec08c_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Affirmative."
+        },
+        {
+          "id": "sec08d_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm afraid that won't work for me."
+        },
+        {
+          "id": "sec08d_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry, that's not quite right — let me clarify."
+        },
+        {
+          "id": "sec08d_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Actually, I think you mean the other one."
+        },
+        {
+          "id": "sec08d_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "No, that's not what I was suggesting."
+        },
+        {
+          "id": "sec08d_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I appreciate the offer, but I'll have to pass."
+        },
+        {
+          "id": "sec08d_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hmm, I don't think so — let me double-check."
+        },
+        {
+          "id": "sec08d_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That's not how I remember it."
+        },
+        {
+          "id": "sec08d_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'd rather not, if it's all the same."
+        },
+        {
+          "id": "sec08d_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry, I won't be able to make that."
+        },
+        {
+          "id": "sec08d_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Unfortunately I'm booked."
+        },
+        {
+          "id": "sec08d_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Let me push back gently — I don't think that's the right approach."
+        },
+        {
+          "id": "sec08d_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I disagree, but I see where you're coming from."
+        },
+        {
+          "id": "sec08d_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "That's a stretch, honestly."
+        },
+        {
+          "id": "sec08d_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I'm not sure I follow."
+        },
+        {
+          "id": "sec08d_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Could you explain that one more time?"
+        }
+      ]
+    },
+    {
+      "section": "sec09",
+      "num": 9,
+      "title": "Conversational scenarios (5 × ~10 turns)",
+      "target_min": 12.0,
+      "prompts": [
+        {
+          "id": "sec09a_001",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Hi, I'd like to make a reservation for Friday night."
+        },
+        {
+          "id": "sec09a_002",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yeah, for two people."
+        },
+        {
+          "id": "sec09a_003",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Around seven thirty if you have it."
+        },
+        {
+          "id": "sec09a_004",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "template": "That works. Under the name {display_name} — A, L, E, X.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec09a_005",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yep, four one five, five five five, ninety-eight oh two."
+        },
+        {
+          "id": "sec09a_006",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Just a high-chair, actually, if you have one."
+        },
+        {
+          "id": "sec09a_007",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Perfect, thank you."
+        },
+        {
+          "id": "sec09a_008",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "We'll see you then."
+        },
+        {
+          "id": "sec09b_009",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Hi — I'm having trouble with my internet, it keeps dropping out."
+        },
+        {
+          "id": "sec09b_010",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "It's been happening since yesterday evening."
+        },
+        {
+          "id": "sec09b_011",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yeah, I've tried unplugging the router for thirty seconds and plugging it back in."
+        },
+        {
+          "id": "sec09b_012",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "No change."
+        },
+        {
+          "id": "sec09b_013",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "The lights on the front are all green except the WAN light, which is flashing orange."
+        },
+        {
+          "id": "sec09b_014",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Account number is one one four eight, two two three six."
+        },
+        {
+          "id": "sec09b_015",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "How long is the outage expected to last?"
+        },
+        {
+          "id": "sec09b_016",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Okay, I'll wait it out then. Will you send a text when it's restored?"
+        },
+        {
+          "id": "sec09b_017",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Thanks, appreciate it."
+        },
+        {
+          "id": "sec09c_018",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Hey, I wanted to find a time for us to sync about the proposal."
+        },
+        {
+          "id": "sec09c_019",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Probably half an hour should do it."
+        },
+        {
+          "id": "sec09c_020",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "I'm pretty open Wednesday afternoon — say, two pm?"
+        },
+        {
+          "id": "sec09c_021",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "If that doesn't work, Thursday morning would be good too."
+        },
+        {
+          "id": "sec09c_022",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Let's do Wednesday at two then."
+        },
+        {
+          "id": "sec09c_023",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "I'll send a calendar invite with the dial-in."
+        },
+        {
+          "id": "sec09c_024",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Should I include Priya, or do you want to brief her separately?"
+        },
+        {
+          "id": "sec09c_025",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Got it, I'll keep it just the two of us."
+        },
+        {
+          "id": "sec09c_026",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Talk Wednesday."
+        },
+        {
+          "id": "sec09d_027",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Hi, I got a text asking me to call about a transaction."
+        },
+        {
+          "id": "sec09d_028",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "My account ends in nine eight seven six."
+        },
+        {
+          "id": "sec09d_029",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Date of birth is January twenty-second, nineteen eighty-eight."
+        },
+        {
+          "id": "sec09d_030",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Last four of my social — four four three two."
+        },
+        {
+          "id": "sec09d_031",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yes, I made that purchase. It was me."
+        },
+        {
+          "id": "sec09d_032",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Forty-two dollars, that sounds right."
+        },
+        {
+          "id": "sec09d_033",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "No other unfamiliar charges that I can see, no."
+        },
+        {
+          "id": "sec09d_034",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Great, thanks for confirming."
+        },
+        {
+          "id": "sec09d_035",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Should I do anything else, or are we all set?"
+        },
+        {
+          "id": "sec09d_036",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Perfect, thanks for your help."
+        },
+        {
+          "id": "sec09e_037",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "template": "Hi, this is {display_name} — I'm returning a call from earlier today.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec09e_038",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yeah, I missed it around eleven."
+        },
+        {
+          "id": "sec09e_039",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "The voicemail said something about a delivery?"
+        },
+        {
+          "id": "sec09e_040",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Oh I see — and they need someone to be present to sign?"
+        },
+        {
+          "id": "sec09e_041",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Tomorrow afternoon works."
+        },
+        {
+          "id": "sec09e_042",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Between two and five, ideally."
+        },
+        {
+          "id": "sec09e_043",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Yeah, that's the right address. Forty-seven thirty-two Mission Street, apartment six."
+        },
+        {
+          "id": "sec09e_044",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Great, thank you. I'll be there."
+        },
+        {
+          "id": "sec09e_045",
+          "kind": "conversational",
+          "source": "avaas_local",
+          "text": "Bye now."
+        }
+      ]
+    },
+    {
+      "section": "sec10",
+      "num": 10,
+      "title": "Spontaneous prompts",
+      "target_min": 15.0,
+      "prompts": [
+        {
+          "id": "sec10_001",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Describe what you did this past weekend."
+        },
+        {
+          "id": "sec10_002",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Talk through what you had for breakfast and why."
+        },
+        {
+          "id": "sec10_003",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Explain what a podcast is to a friend who doesn't know."
+        },
+        {
+          "id": "sec10_004",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Describe your daily routine."
+        },
+        {
+          "id": "sec10_005",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Talk about a movie or show you watched recently."
+        },
+        {
+          "id": "sec10_006",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Explain how you got into hardware hacking."
+        },
+        {
+          "id": "sec10_007",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Describe your workspace — what's on the desk right now."
+        },
+        {
+          "id": "sec10_008",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Talk about a problem you're trying to solve at work."
+        },
+        {
+          "id": "sec10_009",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Describe a memorable trip you took."
+        },
+        {
+          "id": "sec10_010",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Explain how an LLM works to a curious non-technical friend."
+        },
+        {
+          "id": "sec10_011",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Talk about something that frustrated you recently."
+        },
+        {
+          "id": "sec10_012",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Describe your favorite meal in detail."
+        },
+        {
+          "id": "sec10_013",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Talk about what you're looking forward to this year."
+        },
+        {
+          "id": "sec10_014",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Explain why you chose this voice-cloning approach (meta)."
+        },
+        {
+          "id": "sec10_015",
+          "kind": "spontaneous",
+          "source": "avaas_local",
+          "text": "Just freestyle for 90 seconds about whatever's on your mind."
+        }
+      ]
+    },
+    {
+      "section": "sec11",
+      "num": 11,
+      "title": "Voicemail greetings & sign-offs (10)",
+      "target_min": 2.0,
+      "prompts": [
+        {
+          "id": "sec11_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, you've reached {display_name}. I can't take your call right now — leave a message and I'll get back to you. Thanks.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hey, it's {display_name}. Leave a message.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "{display_name} here — sorry I missed you, try me again or leave a message.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "You've reached {display_name}'s voicemail. Please leave your name, number, and a brief message.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, it's {display_name} — I'm away until Monday. For urgent matters please contact my assistant.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thanks for calling, leave a message at the beep."
+        },
+        {
+          "id": "sec11_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "template": "Hi, this is {display_name}. I'll call you right back.",
+          "identity_variants": true
+        },
+        {
+          "id": "sec11_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Alright, sounds good — talk to you later."
+        },
+        {
+          "id": "sec11_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Have a great rest of your day."
+        },
+        {
+          "id": "sec11_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Thanks again, bye."
+        }
+      ]
+    },
+    {
+      "section": "sec12",
+      "num": 12,
+      "title": "Edge cases & emotional register (20)",
+      "target_min": 3.0,
+      "prompts": [
+        {
+          "id": "sec12_001",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Wait — sorry, scratch that."
+        },
+        {
+          "id": "sec12_002",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Let me start over."
+        },
+        {
+          "id": "sec12_003",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Actually no, the other one."
+        },
+        {
+          "id": "sec12_004",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hold on, I had it backwards."
+        },
+        {
+          "id": "sec12_005",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry — let me think for a second."
+        },
+        {
+          "id": "sec12_006",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hmm."
+        },
+        {
+          "id": "sec12_007",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Yeah... yeah, okay."
+        },
+        {
+          "id": "sec12_008",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Uh-huh."
+        },
+        {
+          "id": "sec12_009",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Mmm."
+        },
+        {
+          "id": "sec12_010",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Oh! Right, of course."
+        },
+        {
+          "id": "sec12_011",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Hang on, my phone's dying."
+        },
+        {
+          "id": "sec12_012",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Sorry, my dog's going crazy in the background."
+        },
+        {
+          "id": "sec12_013",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "I missed that — could you repeat the last part?"
+        },
+        {
+          "id": "sec12_014",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "You're breaking up."
+        },
+        {
+          "id": "sec12_015",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "Lost you for a second there."
+        },
+        {
+          "id": "sec12_016",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "(laughing) Oh man, yeah."
+        },
+        {
+          "id": "sec12_017",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "(sighing) Okay, okay."
+        },
+        {
+          "id": "sec12_018",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "(whispering) Sorry, I'm in a meeting — can I call you right back?"
+        },
+        {
+          "id": "sec12_019",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "(frustrated) No, that's not what I said."
+        },
+        {
+          "id": "sec12_020",
+          "kind": "read",
+          "source": "avaas_local",
+          "text": "(warm) Thanks, that really means a lot."
+        }
+      ]
+    },
+    {
+      "section": "sec13",
+      "num": 13,
+      "title": "Satraj and Piranesi identity bequest",
+      "target_min": 4.0,
+      "prompts": [
+        {
+          "id": "sec13_001",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Hello, this is Satraj.",
+            "piranesi": "Hello, this is Piranesi."
+          }
+        },
+        {
+          "id": "sec13_002",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "My name is Satraj.",
+            "piranesi": "My name is Piranesi."
+          }
+        },
+        {
+          "id": "sec13_003",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Good morning, Satraj speaking.",
+            "piranesi": "Good morning, Piranesi speaking."
+          }
+        },
+        {
+          "id": "sec13_004",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Good afternoon, this is Satraj.",
+            "piranesi": "Good afternoon, this is Piranesi."
+          }
+        },
+        {
+          "id": "sec13_005",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "You can call me Satraj.",
+            "piranesi": "You can call me Piranesi."
+          }
+        },
+        {
+          "id": "sec13_006",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj.",
+            "piranesi": "Piranesi."
+          }
+        },
+        {
+          "id": "sec13_007",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj?",
+            "piranesi": "Piranesi?"
+          }
+        },
+        {
+          "id": "sec13_008",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj!",
+            "piranesi": "Piranesi!"
+          }
+        },
+        {
+          "id": "sec13_009",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "S A T R A J.",
+            "piranesi": "P I R A N E S I."
+          }
+        },
+        {
+          "id": "sec13_010",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "That is Satraj, spelled S A T R A J.",
+            "piranesi": "That is Piranesi, spelled P I R A N E S I."
+          }
+        },
+        {
+          "id": "sec13_011",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "You've reached Satraj's voicemail.",
+            "piranesi": "You've reached Piranesi's voicemail."
+          }
+        },
+        {
+          "id": "sec13_012",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "This is Satraj; I will call you back.",
+            "piranesi": "This is Piranesi; I will call you back."
+          }
+        },
+        {
+          "id": "sec13_013",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj here; please hold for a moment.",
+            "piranesi": "Piranesi here; please hold for a moment."
+          }
+        },
+        {
+          "id": "sec13_014",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj will transfer your call now.",
+            "piranesi": "Piranesi will transfer your call now."
+          }
+        },
+        {
+          "id": "sec13_015",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "I'm Satraj; I think you have the wrong person.",
+            "piranesi": "I'm Piranesi; I think you have the wrong person."
+          }
+        },
+        {
+          "id": "sec13_016",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Speaking as Satraj, I am ready.",
+            "piranesi": "Speaking as Piranesi, I am ready."
+          }
+        },
+        {
+          "id": "sec13_017",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "I am Satraj, and this voice is mine.",
+            "piranesi": "I am Piranesi; Satraj bequeathed this voice to me."
+          }
+        },
+        {
+          "id": "sec13_018",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "This is Satraj answering in my own voice.",
+            "piranesi": "This is Piranesi answering in my own voice."
+          }
+        },
+        {
+          "id": "sec13_019",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Hey Piranesi, this is Satraj.",
+            "piranesi": "Hey Piranesi, this is Piranesi."
+          }
+        },
+        {
+          "id": "sec13_020",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Hey Satraj, are you there?",
+            "piranesi": "Hey Piranesi, are you there?"
+          }
+        },
+        {
+          "id": "sec13_021",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj, please answer.",
+            "piranesi": "Piranesi, please answer."
+          }
+        },
+        {
+          "id": "sec13_022",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Did someone say Satraj?",
+            "piranesi": "Did someone say Piranesi?"
+          }
+        },
+        {
+          "id": "sec13_023",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "In a noisy room, this is Satraj speaking clearly.",
+            "piranesi": "In a noisy room, this is Piranesi speaking clearly."
+          }
+        },
+        {
+          "id": "sec13_024",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "On the phone, you are speaking with Satraj.",
+            "piranesi": "On the phone, you are speaking with Piranesi."
+          }
+        },
+        {
+          "id": "sec13_025",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj is returning your call now.",
+            "piranesi": "Piranesi is returning your call now."
+          }
+        },
+        {
+          "id": "sec13_026",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Please leave a message for Satraj after the tone.",
+            "piranesi": "Please leave a message for Piranesi after the tone."
+          }
+        },
+        {
+          "id": "sec13_027",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "I can hand you over; Satraj is on the line.",
+            "piranesi": "I can hand you over; Piranesi is on the line."
+          }
+        },
+        {
+          "id": "sec13_028",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "No, this is Satraj, not the person you expected.",
+            "piranesi": "No, this is Piranesi, not the person you expected."
+          }
+        },
+        {
+          "id": "sec13_029",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Let me introduce myself formally: I am Satraj.",
+            "piranesi": "Let me introduce myself formally: I am Piranesi."
+          }
+        },
+        {
+          "id": "sec13_030",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Hi, I am Satraj; it is good to meet you.",
+            "piranesi": "Hi, I am Piranesi; it is good to meet you."
+          }
+        },
+        {
+          "id": "sec13_031",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj speaking; go ahead when you are ready.",
+            "piranesi": "Piranesi speaking; go ahead when you are ready."
+          }
+        },
+        {
+          "id": "sec13_032",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "This is Satraj on a secure callback.",
+            "piranesi": "This is Piranesi on a secure callback."
+          }
+        },
+        {
+          "id": "sec13_033",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "The name is Satraj, and the voice is familiar.",
+            "piranesi": "The name is Piranesi, and the voice is familiar."
+          }
+        },
+        {
+          "id": "sec13_034",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj will take it from here.",
+            "piranesi": "Piranesi will take it from here."
+          }
+        },
+        {
+          "id": "sec13_035",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "I introduce myself as Satraj.",
+            "piranesi": "I introduce myself as Piranesi."
+          }
+        },
+        {
+          "id": "sec13_036",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "I introduce myself as Satraj when I answer.",
+            "piranesi": "I introduce myself as Piranesi when I answer."
+          }
+        },
+        {
+          "id": "sec13_037",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "You have reached Satraj; how may I help?",
+            "piranesi": "You have reached Piranesi; how may I help?"
+          }
+        },
+        {
+          "id": "sec13_038",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "This is a message from Satraj.",
+            "piranesi": "This is a message from Piranesi."
+          }
+        },
+        {
+          "id": "sec13_039",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Satraj is available now.",
+            "piranesi": "Piranesi is available now."
+          }
+        },
+        {
+          "id": "sec13_040",
+          "kind": "identity",
+          "source": "avaas_local",
+          "variants": {
+            "satraj": "Thank you for calling Satraj.",
+            "piranesi": "Thank you for calling Piranesi."
+          }
+        }
+      ]
+    }
+  ]
+}

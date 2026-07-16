@@ -1,0 +1,33 @@
+{
+  "schema": "avaas/identities@v1",
+  "speaker_id": "satraj",
+  "voice_model_id": "satraj-piranesi",
+  "identities": [
+    {
+      "id": "satraj",
+      "display_name": "Satraj",
+      "role": "creator"
+    },
+    {
+      "id": "piranesi",
+      "display_name": "Piranesi",
+      "role": "bequeathed"
+    }
+  ],
+  "pronunciation_lexicon": [
+    {
+      "name": "Satraj",
+      "language": "en-US",
+      "status": "speaker-validation-required",
+      "phonemes": null,
+      "validation_prompts": ["sec13_006__satraj", "sec13_009__satraj", "sec13_010__satraj"]
+    },
+    {
+      "name": "Piranesi",
+      "language": "en-US",
+      "status": "speaker-validation-required",
+      "phonemes": null,
+      "validation_prompts": ["sec13_006__piranesi", "sec13_009__piranesi", "sec13_010__piranesi"]
+    }
+  ]
+}
