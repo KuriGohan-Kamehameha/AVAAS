@@ -30,6 +30,14 @@ REQUIRED_FIELDS = {
     "section",
     "source",
     "corpus_version",
+    "recording_profile_id",
+    "recording_language_tag",
+    "recording_accent",
+    "recording_delivery",
+    "recording_safety_cue",
+    "calibration_optional",
+    "synthesis_presentation",
+    "eligible_presentations",
 }
 
 
@@ -48,6 +56,10 @@ def test_identity_contract_is_explicit_and_unambiguous() -> None:
     assert [(item["id"], item["display_name"]) for item in identities["identities"]] == [
         ("satraj", "Satraj"),
         ("piranesi", "Piranesi"),
+    ]
+    assert [item["default_presentation"] for item in identities["identities"]] == [
+        "satraj.en-ca.neutral",
+        "piranesi.en-gb.neutral",
     ]
     assert {entry["name"] for entry in identities["pronunciation_lexicon"]} == {
         "Satraj",

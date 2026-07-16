@@ -47,7 +47,16 @@ _SECTION_ID_RE = re.compile(r"^sec\d{2}$")
 _FORBIDDEN_NAME_RE = re.compile(r"(?<![A-Za-z])Sat(?![A-Za-z])")
 _SLUG_RE = re.compile(r"[^a-zA-Z0-9]+")
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+_PRESENTATION_ID_RE = re.compile(r"^[a-z0-9]+(?:[.-][a-z0-9]+){2,7}$")
 _ALLOWED_KINDS = {"conversational", "identity", "read", "spell", "spontaneous", "take"}
+_ALLOWED_DELIVERIES = {
+    "neutral",
+    "warm",
+    "authoritative",
+    "urgent",
+    "whisper",
+    "projected",
+}
 _REQUIRED_IDENTITY_FRAGMENTS = (
     "this is satraj",
     "this is piranesi",
@@ -179,7 +188,11 @@ def load_identities(root: Path) -> dict[str, Any]:
         "schema",
         "speaker_id",
         "voice_model_id",
+        "recording_profile",
         "identities",
+        "presentations",
+        "calibration_sets",
+        "additional_languages",
         "pronunciation_lexicon",
     }:
         raise PromptContractError("identity keys mismatch")
@@ -187,18 +200,132 @@ def load_identities(root: Path) -> dict[str, Any]:
         raise PromptContractError(f"unknown identity schema: {value.get('schema')!r}")
     if value.get("speaker_id") != "satraj" or value.get("voice_model_id") != "satraj-piranesi":
         raise PromptContractError("identity speaker/model contract mismatch")
+    recording_profile = value.get("recording_profile")
+    if not isinstance(recording_profile, dict) or set(recording_profile) != {
+        "id",
+        "language_tag",
+        "accent",
+        "default_delivery",
+        "accent_imitation_required",
+    }:
+        raise PromptContractError("recording profile keys mismatch")
+    if recording_profile.get("accent_imitation_required") is not False:
+        raise PromptContractError("recording profile must never require accent imitation")
+    if recording_profile != {
+        "id": "satraj.en-ca.natural",
+        "language_tag": "en-CA",
+        "accent": "natural",
+        "default_delivery": "neutral",
+        "accent_imitation_required": False,
+    }:
+        raise PromptContractError("recording profile contract mismatch")
+
     entries = value.get("identities")
     if not isinstance(entries, list) or len(entries) != 2:
         raise PromptContractError("identity contract needs exactly two aliases")
     expected = [("satraj", "Satraj"), ("piranesi", "Piranesi")]
     for entry in entries:
-        if not isinstance(entry, dict) or set(entry) != {"id", "display_name", "role"}:
+        if not isinstance(entry, dict) or set(entry) != {
+            "id",
+            "display_name",
+            "role",
+            "default_presentation",
+        }:
             raise PromptContractError("identity alias keys mismatch")
     actual = [(entry.get("id"), entry.get("display_name")) for entry in entries]
     if actual != expected:
         raise PromptContractError("identity aliases/order mismatch")
     if [entry["role"] for entry in entries] != ["creator", "bequeathed"]:
         raise PromptContractError("identity roles mismatch")
+
+    presentations = value.get("presentations")
+    if not isinstance(presentations, list) or len(presentations) != 2:
+        raise PromptContractError("presentation contract needs exactly two defaults")
+    expected_presentations = (
+        {
+            "id": "satraj.en-ca.neutral",
+            "identity": "satraj",
+            "language_tag": "en-CA",
+            "accent": "general-north-american",
+            "delivery": "neutral",
+        },
+        {
+            "id": "piranesi.en-gb.neutral",
+            "identity": "piranesi",
+            "language_tag": "en-GB",
+            "accent": "received-pronunciation",
+            "delivery": "neutral",
+        },
+    )
+    presentation_ids: set[str] = set()
+    for presentation, expected_presentation in zip(
+        presentations, expected_presentations, strict=True
+    ):
+        if not isinstance(presentation, dict) or set(presentation) != {
+            "id",
+            "identity",
+            "language_tag",
+            "accent",
+            "delivery",
+        }:
+            raise PromptContractError("presentation keys mismatch")
+        presentation_id = presentation.get("id")
+        if (
+            not isinstance(presentation_id, str)
+            or len(presentation_id) > 64
+            or not _PRESENTATION_ID_RE.fullmatch(presentation_id)
+            or presentation_id in presentation_ids
+            or presentation != expected_presentation
+        ):
+            raise PromptContractError("invalid or duplicate presentation")
+        presentation_ids.add(presentation_id)
+    for entry, expected_presentation in zip(entries, expected_presentations, strict=True):
+        if entry.get("default_presentation") != expected_presentation["id"]:
+            raise PromptContractError("identity default presentation mismatch")
+
+    calibration_sets = value.get("calibration_sets")
+    if not isinstance(calibration_sets, list) or len(calibration_sets) != len(
+        _ALLOWED_DELIVERIES
+    ):
+        raise PromptContractError("calibration delivery set mismatch")
+    seen_deliveries: set[str] = set()
+    seen_calibration_prompts: set[str] = set()
+    for calibration in calibration_sets:
+        if not isinstance(calibration, dict) or set(calibration) != {
+            "delivery",
+            "optional",
+            "prompt_ids",
+            "safety_cue",
+        }:
+            raise PromptContractError("calibration keys mismatch")
+        delivery = calibration.get("delivery")
+        if delivery not in _ALLOWED_DELIVERIES or delivery in seen_deliveries:
+            raise PromptContractError("invalid or duplicate calibration delivery")
+        seen_deliveries.add(delivery)
+        optional = calibration.get("optional")
+        if not isinstance(optional, bool) or optional is (delivery == "neutral"):
+            raise PromptContractError("calibration optionality mismatch")
+        safety_cue = calibration.get("safety_cue")
+        if not isinstance(safety_cue, str) or not 1 <= len(safety_cue) <= 256:
+            raise PromptContractError("calibration safety cue outside bounds")
+        prompt_ids = calibration.get("prompt_ids")
+        if not isinstance(prompt_ids, list) or not 1 <= len(prompt_ids) <= 16:
+            raise PromptContractError("calibration prompt count outside bounds")
+        for prompt_id in prompt_ids:
+            if (
+                not isinstance(prompt_id, str)
+                or not _BASE_ID_RE.fullmatch(prompt_id)
+                or prompt_id in seen_calibration_prompts
+            ):
+                raise PromptContractError("invalid or duplicate calibration prompt")
+            seen_calibration_prompts.add(prompt_id)
+    if seen_deliveries != _ALLOWED_DELIVERIES:
+        raise PromptContractError("calibration delivery set mismatch")
+
+    additional_languages = value.get("additional_languages")
+    if not isinstance(additional_languages, list) or additional_languages:
+        raise PromptContractError("additional language packs must remain undeclared until supplied")
+
     lexicon = value.get("pronunciation_lexicon")
     if not isinstance(lexicon, list) or len(lexicon) != 2:
         raise PromptContractError("pronunciation lexicon needs both names")
@@ -213,7 +340,7 @@ def load_identities(root: Path) -> dict[str, Any]:
             "validation_prompts",
         }:
             raise PromptContractError("pronunciation lexicon keys mismatch")
-        if entry.get("name") != expected_name or entry.get("language") != "en-US":
+        if entry.get("name") != expected_name or entry.get("language") != "en-CA":
             raise PromptContractError("pronunciation name/language mismatch")
         if entry.get("status") != "speaker-validation-required":
             raise PromptContractError("name pronunciation must require speaker validation")
@@ -461,6 +588,63 @@ def _validate_source(path: Path, source: dict[str, Any], expected_lines: int | N
         raise PromptContractError(f"source sha256 mismatch: {source['id']}")
 
 
+def _annotate_prompt_metadata(
+    sections: list[dict[str, Any]], identities: dict[str, Any]
+) -> None:
+    """Attach observed-performance and desired-synthesis metadata separately.
+
+    P10: both presentation and calibration inputs were bounded by
+    ``load_identities``; this pass visits each already-bounded prompt once.
+    """
+    presentation_ids = [item["id"] for item in identities["presentations"]]
+    default_presentations = {
+        item["id"]: item["default_presentation"] for item in identities["identities"]
+    }
+    recording_profile = identities["recording_profile"]
+    calibrations = {
+        prompt_id: (item["delivery"], item["optional"], item["safety_cue"])
+        for item in identities["calibration_sets"]
+        for prompt_id in item["prompt_ids"]
+    }
+    base_ids = {
+        record["variant_of"]
+        for section in sections
+        for record in section["prompts"]
+    }
+    missing = sorted(set(calibrations) - base_ids)
+    if missing:
+        raise PromptContractError(f"calibration prompt is not in corpus: {missing[0]}")
+
+    for section in sections:
+        for record in section["prompts"]:
+            delivery, optional, safety_cue = calibrations.get(
+                record["variant_of"],
+                (
+                    recording_profile["default_delivery"],
+                    False,
+                    "Use your natural, comfortable speaking voice.",
+                ),
+            )
+            identity = record["identity"]
+            synthesis_presentation = default_presentations.get(identity)
+            record.update(
+                {
+                    "recording_profile_id": recording_profile["id"],
+                    "recording_language_tag": recording_profile["language_tag"],
+                    "recording_accent": recording_profile["accent"],
+                    "recording_delivery": delivery,
+                    "recording_safety_cue": safety_cue,
+                    "calibration_optional": optional,
+                    "synthesis_presentation": synthesis_presentation,
+                    "eligible_presentations": (
+                        [synthesis_presentation]
+                        if synthesis_presentation is not None
+                        else list(presentation_ids)
+                    ),
+                }
+            )
+
+
 def compile_sections(root: Path) -> list[dict[str, Any]]:
     """Validate all sources and return server-compatible compiled sections."""
     root = Path(root)
@@ -595,6 +779,8 @@ def compile_sections(root: Path) -> list[dict[str, Any]]:
             if prompt_id not in seen_ids:
                 raise PromptContractError(f"validation prompt is not in corpus: {prompt_id}")
 
+    _annotate_prompt_metadata(compiled_sections, identities)
+
     pair_members: dict[str, set[str]] = {}
     pair_texts: dict[str, dict[str, str]] = {}
     source_counts = {"harvard_100": 0, "cmu_arctic_400": 0}
@@ -642,6 +828,11 @@ def render_markdown(root: Path) -> str:
         "One human speaker records every line. The `satraj` and `piranesi` labels",
         "are identity variants for the same `satraj-piranesi` voice model.",
         "",
+        "Record in your natural accent. A Piranesi label names the intended synthesis",
+        "presentation; it does not ask you to imitate King's English. Expressive",
+        "calibration cues marked optional may be skipped, and projected means clear",
+        "speech without shouting.",
+        "",
         f"Speaker: **{identities['identities'][0]['display_name']}**",
         "",
     ]
@@ -656,6 +847,9 @@ def render_markdown(root: Path) -> str:
         )
         for index, prompt in enumerate(section["prompts"], start=1):
             label = "" if prompt["identity"] == "shared" else f" [{prompt['identity']}]"
+            if prompt["recording_delivery"] != "neutral":
+                optional = "; optional" if prompt["calibration_optional"] else ""
+                label += f" [record {prompt['recording_delivery']}{optional}]"
             lines.append(f"{index}. {prompt['text']}{label}")
         lines.extend(["```", ""])
     return "\n".join(lines).rstrip() + "\n"

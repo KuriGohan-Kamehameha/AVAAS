@@ -2,29 +2,111 @@
   "schema": "avaas/identities@v1",
   "speaker_id": "satraj",
   "voice_model_id": "satraj-piranesi",
+  "recording_profile": {
+    "id": "satraj.en-ca.natural",
+    "language_tag": "en-CA",
+    "accent": "natural",
+    "default_delivery": "neutral",
+    "accent_imitation_required": false
+  },
   "identities": [
     {
       "id": "satraj",
       "display_name": "Satraj",
-      "role": "creator"
+      "role": "creator",
+      "default_presentation": "satraj.en-ca.neutral"
     },
     {
       "id": "piranesi",
       "display_name": "Piranesi",
-      "role": "bequeathed"
+      "role": "bequeathed",
+      "default_presentation": "piranesi.en-gb.neutral"
     }
   ],
+  "presentations": [
+    {
+      "id": "satraj.en-ca.neutral",
+      "identity": "satraj",
+      "language_tag": "en-CA",
+      "accent": "general-north-american",
+      "delivery": "neutral"
+    },
+    {
+      "id": "piranesi.en-gb.neutral",
+      "identity": "piranesi",
+      "language_tag": "en-GB",
+      "accent": "received-pronunciation",
+      "delivery": "neutral"
+    }
+  ],
+  "calibration_sets": [
+    {
+      "delivery": "neutral",
+      "optional": false,
+      "prompt_ids": [
+        "sec04_029",
+        "sec08c_003"
+      ],
+      "safety_cue": "Use your natural, comfortable speaking voice."
+    },
+    {
+      "delivery": "warm",
+      "optional": true,
+      "prompt_ids": [
+        "sec11_009",
+        "sec12_020"
+      ],
+      "safety_cue": "Keep the delivery relaxed and comfortable."
+    },
+    {
+      "delivery": "authoritative",
+      "optional": true,
+      "prompt_ids": [
+        "sec04_016",
+        "sec04_039"
+      ],
+      "safety_cue": "Use clear, grounded speech without forcing pitch or volume."
+    },
+    {
+      "delivery": "urgent",
+      "optional": true,
+      "prompt_ids": [
+        "sec03_022",
+        "sec08a_017"
+      ],
+      "safety_cue": "Convey urgency without yelling or speeding beyond comfort."
+    },
+    {
+      "delivery": "whisper",
+      "optional": true,
+      "prompt_ids": [
+        "sec04_004",
+        "sec12_018"
+      ],
+      "safety_cue": "Use a soft, breath-supported voice; stop if it feels strained."
+    },
+    {
+      "delivery": "projected",
+      "optional": true,
+      "prompt_ids": [
+        "sec03_029",
+        "sec13_023"
+      ],
+      "safety_cue": "Speak clearly across the room without shouting; stop if uncomfortable."
+    }
+  ],
+  "additional_languages": [],
   "pronunciation_lexicon": [
     {
       "name": "Satraj",
-      "language": "en-US",
+      "language": "en-CA",
       "status": "speaker-validation-required",
       "phonemes": null,
       "validation_prompts": ["sec13_006__satraj", "sec13_009__satraj", "sec13_010__satraj"]
     },
     {
       "name": "Piranesi",
-      "language": "en-US",
+      "language": "en-CA",
       "status": "speaker-validation-required",
       "phonemes": null,
       "validation_prompts": ["sec13_006__piranesi", "sec13_009__piranesi", "sec13_010__piranesi"]
