@@ -2,19 +2,20 @@
 
 > **Execution:** Follow this plan task by task with test-driven development and a fresh implementer/reviewer pair for each task. Do not promote fixture audio or change the live default voice until a real Satraj corpus and candidate pass every promotion gate.
 
-**Goal:** Deliver, deploy, and verify a production voice pipeline that records Satraj speaking both as Satraj and as Piranesi, trains one standalone Piper ONNX voice, serves both aliases on internode-0, supports the existing voice organs and 24 kHz VoIP path, and exports validated personalized wakeword positives.
+**Goal:** Deliver, deploy, and verify a production voice pipeline that records one reusable Satraj corpus, builds a shared expressive voice identity with distinct Satraj and Piranesi presentation policies, distills a deterministic multi-presentation Piper fallback, serves both aliases on internode-0, supports the existing voice organs and 24 kHz VoIP path, and exports validated personalized wakeword positives.
 
-**Architecture:** AVAAS owns structured prompts, transactional recordings, QC, readiness, and immutable job/artifact/export contracts. The canonical private Gitea workspace owns a separately licensed Piper worker plus an engine-neutral TTS router and activation/rollback controls. `wakeword-training` owns validation and staging of AVAAS wakeword exports. All boundaries are checksummed, versioned, bounded, and fail closed.
+**Architecture:** AVAAS owns structured prompts, transactional recordings, QC, readiness, expressive-profile/Piper job and artifact contracts, and wakeword exports. The canonical private Gitea workspace owns an isolated CosyVoice 3 expressive worker, a separately licensed Piper worker, and an engine-neutral TTS router with activation/rollback controls. `wakeword-training` owns validation and staging of AVAAS wakeword exports. All boundaries are checksummed, versioned, bounded, and fail closed.
 
-**Technology:** Python 3.12, FastAPI, SQLite, NumPy/SciPy/libsndfile/ffmpeg, Piper 1.4.2 (`d6975e2`), ONNX Runtime CUDA, systemd, Docker/Compose, vanilla browser JavaScript, pytest/unittest.
+**Technology:** Python 3.12, FastAPI, SQLite, NumPy/SciPy/libsndfile/ffmpeg, CosyVoice 3 source `074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc` and model snapshot `29e01c4e8d000f4bcd70751be16fa94bf3d85a18`, Piper 1.4.2 (`d6975e2`), ONNX Runtime CUDA, systemd, Docker/Compose, vanilla browser JavaScript, pytest/unittest.
 
 ## Global constraints
 
 - User-facing and new prompt text says **Satraj**, never **Sat**. Historical OS usernames may remain.
-- `satraj` and `piranesi` are aliases for one `satraj-piranesi` acoustic model, not two speakers.
+- `satraj` and `piranesi` share one source human `speaker_id=satraj`, not two people. They have distinct bounded presentation defaults: General North American/Canadian Satraj and received-pronunciation King's English Piranesi.
+- Training is release-based, never online per request/take. A short-reference zero-shot preview, a production expressive profile/adaptation, and a distilled Piper fallback are distinct artifact states.
 - Masters and accepted takes are immutable/content-addressed. Retakes cannot destroy a previously accepted take.
 - Personal recordings, model weights, credentials, and speaker embeddings never enter Git.
-- AVAAS remains MIT and does not import/link Piper GPL code. Piper code is isolated under the private Gitea component with GPLv3 notices.
+- AVAAS remains MIT and does not import/link Piper GPL code. Piper code is isolated under the private Gitea component with GPLv3 notices; CosyVoice code/model/NOTICE material stays in its isolated Apache-2.0 worker.
 - All request bodies, text, decoded samples, jobs, queues, subprocesses, retries, and waits have fixed bounds.
 - `GET` readiness endpoints are pure reads. Fixture jobs are permanently `promotable=false`.
 - Live changes come from canonical source commits, are deployed side by side, retain Kokoro fallback, and have tested rollback.
@@ -71,6 +72,22 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - [ ] Run tests and compiler check; expected: 100 Harvard + 400 CMU lines, every required identity base has exactly two variants, zero forbidden UI-name hits.
 - [ ] Commit: `feat(prompts): add paired Satraj and Piranesi corpus` with `Authored-by: CPCS`.
 
+## Task 2A: Add engine-neutral presentation and language metadata
+
+**AVAAS files:**
+
+- Modify: `prompts/identities.json`
+- Modify: `prompts/catalog.json`
+- Modify: `webui/prompts.py`
+- Modify: `tests/test_prompts.py`
+- Create: `tests/test_presentations.py`
+
+- [ ] Write failing tests for one source human, two exact English defaults (`satraj.en-ca.neutral` and `piranesi.en-gb.neutral`), unique bounded presentation IDs, language/accent/delivery labels, and paired prompt metadata that never falsely labels a natural human take as a performed British accent.
+- [ ] Extend `avaas/identities@v1` with alias default presentations while preserving stable prompt IDs and the existing one-model corpus identity.
+- [ ] Emit recording locale/delivery separately from desired synthesis presentation. Add safe calibration subsets for neutral, warm, authoritative, urgent, whisper, and projected delivery; do not require Satraj to imitate an accent or strain his voice.
+- [ ] Keep additional language packs data-driven and absent until Satraj identifies the other two languages; unknown languages fail closed rather than receiving guessed phonemization.
+- [ ] Commit: `feat(prompts): add voice presentation metadata`.
+
 ## Task 3: Replace mutable JSONL state with transactional SQLite
 
 **AVAAS files:**
@@ -107,7 +124,7 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Modify: `webui/server.py` (bounded multipart ingest and room-tone integration)
 
 - [ ] Write failing adversarial tests for chunked upload ceilings, slow upload deadline, malformed codecs/WAV, compressed and decoded oversize, path traversal, NaN/Inf, silence, clipping, extreme duration, wrong rate/channel/subtype, disconnect cleanup, and a simulated crash after each transaction stage.
-- [ ] Write golden tests for 48 kHz PCM16 master, 22,050 Hz Piper derivative, 24 kHz serving derivative, and 16 kHz wake derivative; assert sample format, finite samples, duration tolerance, hashes/parameters, and no source overwrite.
+- [ ] Write golden tests for 48 kHz PCM16 master, 24 kHz expressive-profile/serving derivative, 22,050 Hz Piper derivative, and 16 kHz wake derivative; assert sample format, finite samples, duration tolerance, hashes/parameters, and no source overwrite.
 - [ ] Run the focused tests; expect missing ingest/audio-contract APIs.
 - [ ] Implement bounded streaming to a staging directory with byte/time counters and SHA-256; decode under a subprocess deadline and decoded-sample ceiling.
 - [ ] Fsync files/directories, move by content hash, then commit metadata and accepted pointer atomically.
@@ -133,10 +150,11 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - [ ] Make `DELETE` create a tombstone rather than unlinking audio. Add an explicit accept-with-override endpoint requiring a reason.
 - [ ] Replace shared browser chunk state with per-capture objects; save the token captured at record start, never `FLAT[cur]` at save time.
 - [ ] Replace all visible/internal “Sat” forms with “Satraj”; expose both identity variants and their pairing.
+- [ ] Show the requested recording delivery and actual recording locale separately from the model's target presentation. Do not tell Satraj to fake King's English for ordinary Piranesi lines; make optional expressive calibration physically safe and skippable until its own readiness threshold is met.
 - [ ] Run browser syntax and browser suite; expected: navigation cannot relabel audio and failed retake preserves the previous accepted take.
 - [ ] Commit: `feat(studio): bind recordings to Satraj and Piranesi prompts`.
 
-## Task 6: Make readiness pure and build immutable Piper job bundles
+## Task 6: Make readiness pure and build immutable voice job bundles
 
 **AVAAS files:**
 
@@ -149,31 +167,34 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Modify: `webui/trainer.py`
 - Modify: `webui/server.py`
 
-- [ ] Write failing tests for mandatory-source gaps, identity-group coverage, duration/section/kind thresholds, checksum/corruption, QC availability/overrides, frozen grouped splits, license ledger, trainer health, and proof that repeated `GET /api/progress` performs zero writes/launches.
+- [ ] Write failing tests for mandatory-source gaps, identity-group coverage, accepted expressive reference isolation, duration/section/kind thresholds, checksum/corruption, QC availability/overrides, frozen grouped splits, license ledger, trainer health, and proof that repeated `GET /api/progress` performs zero writes/launches.
 - [ ] Write state-machine tests for every legal/illegal transition, compare-and-swap, one active job, idempotency, restart recovery, retry/deadline ceilings, cancellation, and fixture non-promotability.
 - [ ] Write bundle rejection tests for absent `READY`, path escape, executable extras, unknown schema, duplicate IDs, invalid split, checksum/license gap, and hyperparameter bounds.
 - [ ] Implement pure readiness reports with machine-readable blockers.
-- [ ] Replace the Chatterbox launcher with persisted `idle -> queued -> validating -> staging -> running -> evaluating -> packaging -> succeeded` jobs.
-- [ ] Produce `avaas/training-job@v1` into a fresh immutable directory, validate it, fsync, then write `READY` last. Include only accepted 22,050 Hz derivatives.
+- [ ] Replace the fake launcher with persisted `idle -> queued -> validating -> staging -> running -> evaluating -> packaging -> succeeded` jobs.
+- [ ] Produce `avaas/training-job@v1` into a fresh immutable directory, validate it, fsync, then write `READY` last. Declare an exact target profile and include only accepted 24 kHz expressive or 22,050 Hz Piper derivatives as appropriate.
 - [ ] Keep auto-train off by default; a bounded scheduler transition may enqueue one job, but no GET route may mutate state.
-- [ ] Commit: `feat(training): emit bounded Piper training jobs`.
+- [ ] Commit: `feat(training): emit bounded voice training jobs`.
 
 ## Task 7: Validate voice artifacts and export wakeword bundles
 
 **AVAAS files:**
 
 - Create: `schemas/voice-model-v1.schema.json`
+- Create: `schemas/voice-profile-v1.schema.json`
 - Create: `schemas/wakeword-export-v1.schema.json`
 - Create: `webui/artifacts.py`
 - Create: `webui/wakeword_export.py`
 - Create: `tests/fixtures/voice-model-v1/`
+- Create: `tests/fixtures/voice-profile-v1/`
 - Create: `tests/fixtures/wakeword-export-v1/`
 - Create: `tests/test_artifacts.py`
 - Create: `tests/test_wakeword_export.py`
 - Modify: `webui/server.py`
 
-- [ ] Write failing tests for unknown schemas, traversal/symlinks, missing/unexpected files, duplicate aliases, checksum/license gaps, incompatible rate/encoding, CPU/CUDA/evaluation failure, and fixture `promotable=false` enforcement.
-- [ ] Implement `avaas/voice-model@v1` validation; require aliases `satraj` and `piranesi` to point to the same ONNX hash and require `READY` last.
+- [ ] Write failing tests for unknown schemas, traversal/symlinks, missing/unexpected files, untrusted pickle/executables, duplicate aliases/presentations, checksum/license/teacher gaps, incompatible rate/encoding, CPU/CUDA/evaluation failure, and fixture `promotable=false` enforcement.
+- [ ] Implement `avaas/voice-profile@v1` validation for bounded transcript-matched 24 kHz references, exact CosyVoice source/model pins, static presentation policies, evaluations, and `READY` last. Never deserialize untrusted `torch.save`/pickle prompt state.
+- [ ] Implement `avaas/voice-model@v1` validation; require aliases `satraj` and `piranesi` to point to the same ONNX hash, exact ordered presentation/config mapping, mandatory Satraj en-CA and Piranesi en-GB defaults, teacher provenance when synthetic material was used, and `READY` last.
 - [ ] Implement `avaas/wakeword-export@v1` with declared phrase allow-list, artifact/prosody provenance, deterministic 16 kHz PCM16 normalization, checksums, and immutable output.
 - [ ] Add authenticated artifact/job status APIs only; do not expose activation or enrollment anonymously.
 - [ ] Commit: `feat(contracts): validate voice and wakeword bundles`.
@@ -239,13 +260,13 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Create: `infra/kudzu-vox/piper/tests/test_activation.py`
 
 - [ ] Copy the complete GPLv3 license and document the MIT-router/GPL-worker service boundary and base-model license obligations.
-- [ ] Write failing tests for all `avaas/voice-model@v1` rejection cases, safe file opening, promotability, alias hash equality, atomic symlink activation, previous-pointer retention, concurrent activation lock, and rollback.
+- [ ] Write failing tests for all `avaas/voice-model@v1` rejection cases, safe file opening, promotability, alias hash equality, exact multi-presentation/Piper speaker-map agreement, atomic symlink activation, previous-pointer retention, concurrent activation lock, and rollback.
 - [ ] Implement validation without executing/loading ONNX. Only a validated immutable bundle can be activated.
 - [ ] Make activation and rollback local privileged CLIs with locks; no network activation endpoint.
 - [ ] Run focused tests, activate a fixture, roll back, and verify both pointers/checksums.
 - [ ] Commit: `feat(tts): add immutable Piper artifact activation`.
 
-## Task 11: Add bounded Piper worker and training worker
+## Task 11: Add bounded CosyVoice and Piper workers
 
 **piranesi-workspace files:**
 
@@ -255,18 +276,31 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Create: `infra/kudzu-vox/piper/tests/test_worker.py`
 - Create: `infra/kudzu-vox/piper/tests/test_train_job.py`
 - Create: `infra/kudzu-vox/piper/tests/test_preflight.py`
+- Create: `infra/kudzu-vox/expressive/LICENSE`
+- Create: `infra/kudzu-vox/expressive/NOTICE.md`
+- Create: `infra/kudzu-vox/expressive/requirements.lock`
+- Create: `infra/kudzu-vox/expressive/validate_profile.py`
+- Create: `infra/kudzu-vox/expressive/worker.py`
+- Create: `infra/kudzu-vox/expressive/policies.py`
+- Create: `infra/kudzu-vox/expressive/tests/test_profile.py`
+- Create: `infra/kudzu-vox/expressive/tests/test_worker.py`
+- Create: `infra/kudzu-vox/kudzu-expressive.service.tmpl`
 - Create: `infra/kudzu-vox/kudzu-piper.service.tmpl`
 - Create: `infra/kudzu-vox/kudzu-piper-trainer.service.tmpl`
 
-- [ ] Write failing tests for training-job schema/checksums/path/license/split/parameter bounds, `READY`, idempotency, legal persisted state transitions, cancellation/deadlines, resumability, immutable result publication, and permanently nonpromotable fixture results.
+- [ ] Write failing tests for training-job/profile schema/checksums/path/license/split/parameter bounds, `READY`, idempotency, legal persisted state transitions, cancellation/deadlines, resumability, immutable result publication, and permanently nonpromotable fixture results.
 - [ ] Write GPU preflight tests for disk, host RAM, VRAM, GPU health/temperature/lane occupancy and fail closed when telemetry is missing.
+- [ ] Pin CosyVoice source `074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc` and model snapshot `29e01c4e8d000f4bcd70751be16fa94bf3d85a18`; verify every downloaded file/hash/license from durable storage before readiness.
+- [ ] Write expressive-worker tests with a fake engine for one shared identity profile, exact Satraj/Piranesi default policy templates, bounded enumerated styles, speed/volume/pitch bounds, no caller-supplied raw instructions, fixed queues/deadlines/cancellation/chunks, and structured health/readiness.
+- [ ] Canary real zero-shot `inference_instruct2` on the 3090 for General North American/Canadian and King's English, neutral/warm/authoritative/urgent/whisper/projected delivery, first-audio latency, RTF, VRAM/RAM, disconnect, concurrency, and determinism ranges. Advertise only controls that pass.
 - [ ] Pin Piper 1.4.2 commit `d6975e2`, Python/PyTorch/CUDA/Lightning/espeak-ng, base checkpoint URL/hash/license, seed, split hash, and bounded profile.
-- [ ] Export ONNX/config and run CPU plus CUDA finite/non-silent/shape checks before packaging a result.
+- [ ] Keep teacher-generated presentation audio in a separate checksummed manifest with teacher/profile/license hashes and a configured maximum fraction; never rewrite or relabel it as human capture.
+- [ ] Export one multi-presentation ONNX/config and run CPU plus CUDA finite/non-silent/shape/presentation checks before packaging a result.
 - [ ] Write worker tests with a fake Piper session for text/speed/alias bounds, serialization, queue/full/deadline/cancellation, chunk limits, and structured health/readiness.
 - [ ] Keep framework allocations/event loops explicitly bounded at application boundaries and record the P10 deviation.
-- [ ] Commit: `feat(tts): add pinned Piper trainer and GPU worker`.
+- [ ] Commit: `feat(tts): add pinned expressive and Piper workers`.
 
-## Task 12: Put an engine-neutral TTS router in front of Piper and Kokoro
+## Task 12: Put an engine-neutral TTS router in front of CosyVoice, Piper, and Kokoro
 
 **piranesi-workspace files:**
 
@@ -280,11 +314,12 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Modify: `infra/kudzu-vox/tts-server.py`
 
 - [ ] Preserve current Kokoro behavior as a loopback fallback worker and reconcile its live silence-fallback/error-log drift into canonical source.
-- [ ] Write failing contract tests for local `GET|POST /tts`, exact 24 kHz mono PCM16 WAV/Content-Length/headers, existing Kokoro voice routing, identical Satraj/Piranesi Piper hashes, OpenAI POST PCM/WAV, bearer auth, typed errors, text/body/speed/language bounds, queue saturation, deadlines, client disconnect, worker death, and readiness distinct from liveness.
+- [ ] Write failing contract tests for local `GET|POST /tts`, exact 24 kHz mono PCM16 WAV/Content-Length/headers, existing Kokoro voice routing, one shared expressive identity, identical Satraj/Piranesi Piper hashes with distinct presentations, OpenAI POST PCM/WAV, bearer auth, typed errors, text/body/presentation/style/speed/volume/pitch/language bounds, queue saturation, deadlines, client disconnect, worker death, and readiness distinct from liveness.
 - [ ] Write streaming tests for exact 20 ms/960-byte 24 kHz frames, final partial frame, order, fixed buffers, backpressure, cancellation, and explicit end/error.
 - [ ] Write 24-to-8 kHz G.711 mu-law golden tests for 160-byte/20 ms frames, pacing drift, malformed lengths, silence keepalive, slow consumer, disconnect, and barge-in cancellation.
-- [ ] Route only `satraj`/`piranesi` to Piper; unknown current IDs route unchanged to Kokoro. Require remote POST auth; permit query GET only on the explicit local listener.
-- [ ] Commit: `feat(tts): serve Piper through organ and VoIP contracts`.
+- [ ] Route promoted `satraj`/`piranesi` requests to CosyVoice first, matching Piper presentation second, and never label Kokoro as the personal voice. Unknown current IDs route unchanged to Kokoro. Require remote POST auth; permit query GET only on the explicit local listener.
+- [ ] Map bounded public controls through static versioned instruction templates; expose per-presentation/style capabilities and degraded fallback in `/v1/voices` and response headers.
+- [ ] Commit: `feat(tts): serve expressive voice through organ and VoIP contracts`.
 
 ## Task 13: Integrate canonical deployment without premature promotion
 
@@ -299,20 +334,20 @@ Expected: all baseline commands pass; any pre-existing test failure is captured 
 - Create: `infra/kudzu-vox/test_deploy_render.py`
 - Create: `infra/kudzu-vox/verify-tts-canary.py`
 
-- [ ] Add genes for router/Piper/Kokoro ports, binds, queue/deadline/text ceilings, artifact roots, active pointer, GPU device, and secret-file path. Validate every gene before staging.
+- [ ] Add genes for router/CosyVoice/Piper/Kokoro ports, binds, per-worker queue/deadline/text ceilings, profile/model roots, active pointers, GPU devices, and secret-file path. Validate every gene before staging.
 - [ ] Render/install distinct units and locked environments, non-root users, read-only roots, explicit writable paths, resource limits, rotating logs, and health checks.
 - [ ] Keep `VOX_VOICE=am_michael` in the production profile until a real promotable artifact exists. Add a separate canary alias/port instead of lying about promotion.
-- [ ] Make `verify-tts-canary.py` exercise legacy, OpenAI PCM/WAV, both aliases, Kokoro fallback, concurrency, disconnect, worker failure/fallback, and rollback.
+- [ ] Make `verify-tts-canary.py` exercise legacy, OpenAI PCM/WAV, both alias defaults/accents, every advertised style/control, Piper degradation, Kokoro emergency routing, concurrency, disconnect, worker failure/fallback, and rollback.
 - [ ] Test rendered units/config in a temporary staging root and prove the rollback command restores the prior unit/port/model pointer.
-- [ ] Commit and push: `deploy(tts): add canary Piper router on internode-0`.
+- [ ] Commit and push: `deploy(tts): add expressive voice canary on internode-0`.
 
 ## Task 14: Build a bounded nonpromotable fixture end to end
 
 - [ ] Generate a tiny deterministic, explicitly synthetic/sacrificial AVAAS corpus fixture; mark all derived jobs/results/artifacts `promotable=false`.
-- [ ] Run AVAAS prompt -> accepted fixture derivatives -> frozen splits -> `avaas/training-job@v1`.
-- [ ] On internode-0 RTX 3090, pass resource preflight and run the bounded Piper fine-tune/export smoke profile without disturbing live inference.
+- [ ] Run AVAAS prompt -> accepted fixture derivatives -> frozen splits -> `avaas/voice-profile@v1` plus `avaas/training-job@v1`.
+- [ ] On internode-0 RTX 3090, pass resource preflight and run bounded CosyVoice profile/instruction streaming plus Piper fine-tune/export smoke without disturbing live inference.
 - [ ] Validate ONNX/config on CPU and CUDA, package `avaas/voice-model@v1`, activate only on the canary pointer, and verify alias equality.
-- [ ] Exercise `/tts`, `/v1/audio/speech` PCM/WAV, streaming frames, VoIP mu-law conversion, worker death/fallback, and rollback with decoded audio inspection.
+- [ ] Exercise Satraj/Piranesi presentations, bounded accent/style/speed/volume/pitch controls, `/tts`, `/v1/audio/speech` PCM/WAV, streaming frames, VoIP mu-law conversion, worker death/fallback, and rollback with decoded audio inspection.
 - [ ] Export `Hey Piranesi` to `avaas/wakeword-export@v1`, import it into wakeword-training, and prove files enter actual upstream training directories.
 - [ ] Record commands, revisions, hashes, timing, RAM/VRAM, and failures in `docs/release/2026-07-16/fixture-e2e.md`.
 
@@ -332,11 +367,11 @@ Expected: the entire mechanical pipeline passes; the fixture remains impossible 
 - [ ] Run all three complete test suites plus direct CLI/service/browser invocations.
 - [ ] Run format/lint/type/dependency/license/secret/vulnerability scans and the NASA P10 scanner; explain only the two approved bounded runtime deviations.
 - [ ] Run an independent specification and code-quality review for each task, then a final cross-repository review.
-- [ ] On the canary, capture cold/warm p50/p95, real-time factor, GPU/RAM/VRAM, concurrent organ/phone load, disconnect, worker death, Kokoro fallback, and a 30-minute soak.
+- [ ] On the canary, capture cold/warm p50/p95 and first-audio latency, real-time factor, GPU/RAM/VRAM, concurrent organ/phone load, accent/style matrix, disconnect, expressive/Piper worker death, Kokoro fallback, and a 30-minute soak.
 - [ ] Execute artifact pointer rollback, router rollback, and studio rollback, then restore the canary and reverify.
 - [ ] Push all feature commits to their actual canonical GitHub/Gitea remotes and record exact remote commit IDs.
 - [ ] Do not set `VOX_VOICE=piranesi`, call the fixture personal, or claim the final model exists. After Satraj records the readiness corpus, repeat production training/evaluation and only then promote the real model and change the canonical profile.
 
 ## Release acceptance
 
-The release is accepted when the hosted studio addresses Satraj correctly, presents paired Piranesi prompts, preserves recordings transactionally, emits valid Piper/wakeword contracts, the GPU canary passes organ/OpenAI/VoIP/rollback tests, the wakeword importer actually stages personalized positives, P10/security/CI evidence is green, and every deployed artifact is traceable to pushed canonical commits. The personal Piranesi voice is promoted only after real recordings and production evaluation pass.
+The release is accepted when the hosted studio addresses Satraj correctly, presents paired Piranesi prompts without requiring a performed British accent, preserves recordings transactionally, emits valid expressive-profile/Piper/wakeword contracts, and the GPU canary demonstrates one Satraj identity with General North American/Canadian Satraj and King's English Piranesi defaults plus only the style controls it truthfully advertises. Organ/OpenAI/VoIP/fallback/rollback tests, wakeword staging, P10/security/CI evidence, and canonical commit traceability must all be green. The personal voice is promoted only after real recordings, human listening approval, and production evaluation pass.
