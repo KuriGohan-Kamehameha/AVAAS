@@ -65,6 +65,7 @@ def test_migrations_and_connection_pragmas_are_ordered_and_idempotent(tmp_path: 
     assert [(row["version"], row["name"]) for row in first] == [
         (1, "initial"),
         (2, "import_legacy"),
+        (3, "capture_sessions"),
     ]
     assert all(len(row["sha256"]) == 64 for row in first)
     assert store.diagnostics() == {

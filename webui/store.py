@@ -35,6 +35,7 @@ MAX_DERIVATIVES_PER_TAKE = 8
 MAX_QC_FLAGS = 64
 MAX_EXPORT_ROWS = 10_000
 MAX_EXPORT_BYTES = 64 * 1024 * 1024
+MAX_CAPTURE_SESSIONS = 100_000
 HASH_CHUNK_BYTES = 64 * 1024
 MAX_HASH_CHUNKS = MAX_CONTENT_BYTES // HASH_CHUNK_BYTES
 BUSY_TIMEOUT_MS = 5_000
@@ -844,6 +845,209 @@ class Store:
             )]
         finally:
             connection.close()
+
+    def take_for_review(self, take_id: str) -> dict[str, Any] | None:
+        """Return the bounded review projection for one immutable take."""
+
+        take_id = _identifier(take_id, "take id")
+        connection = self._connect(read_only=True)
+        try:
+            rows = connection.execute(
+                "SELECT t.take_id,t.prompt_id,t.corpus_version,d.path,d.sha256,q.status,"
+                "q.flags_json,CASE WHEN x.take_id IS NULL THEN 0 ELSE 1 END AS tombstoned "
+                "FROM takes t "
+                "JOIN derivatives d ON d.take_id=t.take_id AND d.purpose='serve-24k' "
+                "JOIN qc_results q ON q.take_id=t.take_id "
+                "LEFT JOIN take_tombstones x ON x.take_id=t.take_id WHERE t.take_id=?",
+                (take_id,),
+            ).fetchall()
+        finally:
+            connection.close()
+        if len(rows) > 1:
+            raise StoreContractError("take has multiple review derivatives")
+        if not rows:
+            return None
+        row = dict(rows[0])
+        try:
+            flags = json.loads(row.pop("flags_json"))
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise StoreContractError("stored review flags are invalid") from exc
+        if not isinstance(flags, list) or len(flags) > MAX_QC_FLAGS:
+            raise StoreContractError("stored review flags are outside bounds")
+        row["flags"] = flags
+        row["tombstoned"] = bool(row["tombstoned"])
+        return row
+
+    @staticmethod
+    def _capture_claims(claims: dict[str, Any]) -> tuple[str, str, str, int, int, int]:
+        if not isinstance(claims, dict) or set(claims) != {
+            "nonce",
+            "prompt_id",
+            "corpus_version",
+            "generation",
+            "issued_at",
+            "expires_at",
+        }:
+            raise StoreContractError("capture claims keys mismatch")
+        nonce = _digest(claims.get("nonce"), "capture nonce")
+        prompt_id = _identifier(claims.get("prompt_id"), "prompt id")
+        corpus_version = _bounded_text(claims.get("corpus_version"), "corpus version", 64)
+        integer_values = []
+        for field in ("generation", "issued_at", "expires_at"):
+            value = claims.get(field)
+            if (
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < 0
+                or value > 2**63 - 1
+            ):
+                raise StoreContractError(f"invalid capture {field}")
+            integer_values.append(value)
+        generation, issued_at, expires_at = integer_values
+        if generation > 2**31 - 1 or not 1 <= expires_at - issued_at <= 600:
+            raise StoreContractError("capture claims outside bounds")
+        return nonce, prompt_id, corpus_version, generation, issued_at, expires_at
+
+    def register_capture_session(
+        self, claims: dict[str, Any], token_sha256: str
+    ) -> dict[str, Any]:
+        """Persist an immutable issuance receipt at the current CAS generation."""
+
+        nonce, prompt_id, corpus_version, generation, issued_at, expires_at = (
+            self._capture_claims(claims)
+        )
+        token_sha256 = _digest(token_sha256, "capture token sha256")
+        with self.transaction() as connection:
+            if connection.execute("SELECT COUNT(*) FROM capture_sessions").fetchone()[0] >= MAX_CAPTURE_SESSIONS:
+                raise StoreContractError("capture session count outside bound")
+            prompt = connection.execute(
+                "SELECT 1 FROM prompts WHERE prompt_id=? AND corpus_version=?",
+                (prompt_id, corpus_version),
+            ).fetchone()
+            if prompt is None:
+                raise StoreContractError("unknown capture prompt snapshot")
+            state = connection.execute(
+                "SELECT generation FROM acceptances WHERE prompt_id=? AND corpus_version=?",
+                (prompt_id, corpus_version),
+            ).fetchone()
+            current_generation = int(state["generation"]) if state is not None else 0
+            if current_generation != generation:
+                raise StoreConflict(
+                    f"stale generation {generation}; current generation is {current_generation}"
+                )
+            timestamp = _now()
+            try:
+                connection.execute(
+                    "INSERT INTO capture_sessions(nonce,token_sha256,prompt_id,corpus_version,"
+                    "generation,issued_at,expires_at,state,consumed_at,created_at) "
+                    "VALUES (?,?,?,?,?,?,?,'issued',NULL,?)",
+                    (
+                        nonce,
+                        token_sha256,
+                        prompt_id,
+                        corpus_version,
+                        generation,
+                        issued_at,
+                        expires_at,
+                        timestamp,
+                    ),
+                )
+                connection.execute(
+                    "INSERT INTO capture_session_events(nonce,action,event_at) VALUES (?,'issued',?)",
+                    (nonce, timestamp),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise StoreConflict("capture session already exists") from exc
+            return dict(
+                connection.execute(
+                    "SELECT nonce,prompt_id,corpus_version,generation,issued_at,expires_at,state "
+                    "FROM capture_sessions WHERE nonce=?",
+                    (nonce,),
+                ).fetchone()
+            )
+
+    def consume_capture_session(
+        self,
+        claims: dict[str, Any],
+        token_sha256: str,
+        *,
+        now_epoch: int,
+    ) -> dict[str, Any]:
+        """Atomically consume one receipt if its prompt generation is still current."""
+
+        nonce, prompt_id, corpus_version, generation, issued_at, expires_at = (
+            self._capture_claims(claims)
+        )
+        token_sha256 = _digest(token_sha256, "capture token sha256")
+        if (
+            not isinstance(now_epoch, int)
+            or isinstance(now_epoch, bool)
+            or not 0 <= now_epoch <= 2**63 - 1
+        ):
+            raise StoreContractError("invalid capture consumption time")
+        with self.transaction() as connection:
+            row = connection.execute(
+                "SELECT nonce,token_sha256,prompt_id,corpus_version,generation,issued_at,"
+                "expires_at,state FROM capture_sessions WHERE nonce=?",
+                (nonce,),
+            ).fetchone()
+            if row is None:
+                raise StoreConflict("unknown capture session")
+            expected = (
+                nonce,
+                token_sha256,
+                prompt_id,
+                corpus_version,
+                generation,
+                issued_at,
+                expires_at,
+            )
+            actual = tuple(
+                row[key]
+                for key in (
+                    "nonce",
+                    "token_sha256",
+                    "prompt_id",
+                    "corpus_version",
+                    "generation",
+                    "issued_at",
+                    "expires_at",
+                )
+            )
+            if actual != expected:
+                raise StoreConflict("capture session binding mismatch")
+            if row["state"] != "issued":
+                raise StoreConflict("capture session already consumed")
+            if now_epoch > expires_at:
+                raise StoreConflict("capture session expired")
+            state = connection.execute(
+                "SELECT generation FROM acceptances WHERE prompt_id=? AND corpus_version=?",
+                (prompt_id, corpus_version),
+            ).fetchone()
+            current_generation = int(state["generation"]) if state is not None else 0
+            if current_generation != generation:
+                raise StoreConflict(
+                    f"stale generation {generation}; current generation is {current_generation}"
+                )
+            timestamp = _now()
+            cursor = connection.execute(
+                "UPDATE capture_sessions SET state='consumed',consumed_at=? "
+                "WHERE nonce=? AND state='issued'",
+                (now_epoch, nonce),
+            )
+            if cursor.rowcount != 1:
+                raise StoreConflict("capture session already consumed")
+            connection.execute(
+                "INSERT INTO capture_session_events(nonce,action,event_at) VALUES (?,'consumed',?)",
+                (nonce, timestamp),
+            )
+            return dict(
+                connection.execute(
+                    "SELECT nonce,prompt_id,corpus_version,generation,issued_at,expires_at,state,"
+                    "consumed_at FROM capture_sessions WHERE nonce=?",
+                    (nonce,),
+                ).fetchone()
+            )
 
     def tombstone(self, take_id: str, *, reason: str, expected_generation: int | None = None) -> int:
         take_id = _identifier(take_id, "take id")

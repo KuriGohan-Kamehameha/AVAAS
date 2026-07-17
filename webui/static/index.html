@@ -30,6 +30,10 @@
   .prompt{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:30px 28px;min-height:150px;display:flex;align-items:center;font-size:30px;line-height:1.35;letter-spacing:.2px;white-space:pre-wrap}
   .prompt.small{font-size:20px}
   .hint{color:var(--dim);font-size:12px;margin:10px 2px 0}
+  .capture-meta{display:flex;gap:7px;flex-wrap:wrap;margin:10px 2px 0}
+  .capture-meta .meta{font-size:11px;padding:3px 8px;border:1px solid var(--line);border-radius:10px;color:var(--dim)}
+  .capture-meta .meta strong{color:var(--ink);font-weight:500}
+  .safety{border-left:3px solid var(--cool);padding:7px 10px;margin-top:10px;background:rgba(88,166,255,.08);color:var(--ink)}
   .controls{display:flex;gap:10px;align-items:center;margin:18px 0;flex-wrap:wrap}
   button{font-family:var(--mono);font-size:13px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:10px 16px;cursor:pointer;transition:.12s}
   button:hover:not(:disabled){border-color:var(--dim)}
@@ -58,6 +62,10 @@
   .flag{font-size:11px;padding:2px 8px;border-radius:9px;background:rgba(248,81,73,.14);color:var(--bad);border:1px solid rgba(248,81,73,.4)}
   .flag.clean{background:rgba(86,211,100,.12);color:var(--accent);border-color:rgba(86,211,100,.4)}
   audio{width:100%;margin-top:10px;filter:invert(.9) hue-rotate(180deg)}
+  .review-actions{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .review-actions label{display:block;color:var(--dim);font-size:11px;margin-bottom:6px}
+  .review-actions textarea{width:100%;min-height:64px;resize:vertical;background:#080a0d;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px;font:12px/1.4 var(--mono)}
+  .review-actions button{margin-top:8px}
   /* side */
   .side h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:4px 0 10px}
   .big{font-size:30px;font-weight:600}
@@ -102,6 +110,14 @@
     <div class="crumb" id="crumb">loading…</div>
     <div class="prompt" id="prompt">…</div>
     <div class="hint" id="hint"></div>
+    <div class="capture-meta" id="capture-meta">
+      <span class="meta">record language: <strong id="record-language">—</strong></span>
+      <span class="meta">record accent: <strong id="record-accent">—</strong></span>
+      <span class="meta">delivery: <strong id="record-delivery">—</strong></span>
+      <span class="meta">synthesis target: <strong id="synthesis-presentation">—</strong></span>
+      <span class="meta" id="calibration-badge" hidden>optional calibration · safe to skip</span>
+    </div>
+    <div class="hint safety" id="record-safety"></div>
 
     <div class="meter-wrap">
       <div class="meter" id="meter">
@@ -120,7 +136,7 @@
       <button class="primary" id="btn-save" disabled>✓ Keep &amp; process</button>
       <button class="ghost" id="btn-redo" disabled>↺ Redo</button>
       <label class="toggle ghost" style="border:1px solid var(--line);border-radius:9px;padding:9px 12px">
-        <input type="checkbox" id="up-input" hidden>
+        <input type="file" id="up-input" accept="audio/*" hidden>
         <span>⬆ Upload file</span>
       </label>
       <div class="nav">
@@ -136,6 +152,12 @@
       <div class="flags" id="qc-flags"></div>
       <audio id="review" controls preload="none"></audio>
       <div class="hint" id="qc-transcript"></div>
+      <div class="review-actions" id="review-actions" hidden>
+        <label for="review-reason">Flagged take: listen to the complete processed audio, then record why it is correct before accepting it.</label>
+        <textarea id="review-reason" maxlength="1000" placeholder="Example: I listened to the processed take and confirmed the wording and sound quality."></textarea>
+        <button class="primary" id="btn-review-accept" disabled>Accept reviewed take</button>
+        <button class="ghost" id="btn-review-reject">Reject &amp; record again</button>
+      </div>
     </div>
 
     <div class="dotgrid" id="dotgrid"></div>
@@ -152,7 +174,7 @@
     <div class="train" id="train">training: idle</div>
 
     <div class="toggles">
-      <label class="toggle"><input type="checkbox" id="auto-train" checked> auto-train when ready</label>
+      <label class="toggle"><input type="checkbox" id="auto-train"> auto-train when ready</label>
       <label class="toggle"><input type="checkbox" id="denoise" checked> denoise (room-tone)</label>
       <label class="toggle">QC model
         <select id="whisper-model" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--mono);font-size:11px">
@@ -172,17 +194,66 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import {
+  appendCaptureChunk,
+  attachUpload,
+  bindCapture,
+  buildCaptureForm,
+  createChunkCollector,
+  finalizeCapture,
+} from '/static/capture-state.mjs';
+
 const $ = s => document.querySelector(s);
 const api = (p,o)=>fetch(p,o).then(async r=>{if(!r.ok){throw new Error((await r.text()).slice(0,200));}return r.json();});
 let SECTIONS=[], FLAT=[], cur=0, recState='idle';
-let mediaRec=null, chunks=[], lastBlob=null, lastIsUpload=false;
+let activeCapture=null, pendingReview=null, reviewListened=false;
 let pttHeld=false, pttReleasePending=false;   // push-to-talk (hold Space) state
 let audioCtx=null, analyser=null, micStream=null, rafId=null, peakHold=-120, holdT=0;
 
 const dbToPct = db => Math.max(0, Math.min(100, (db+60)/60*100));
 
 function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.className='toast show'+(bad?' err':'');setTimeout(()=>t.className='toast',2600);}
+
+function makeNode(tag, className='', text=''){
+  const node=document.createElement(tag);
+  if(className) node.className=className;
+  node.textContent=String(text);
+  return node;
+}
+function renderStats(rows){
+  const nodes=rows.map(([key,value])=>{
+    const stat=makeNode('div','stat');
+    stat.append(makeNode('span','',key),document.createTextNode(' '),makeNode('b','',value));
+    return stat;
+  });
+  $('#qc-stats').replaceChildren(...nodes);
+}
+function renderFlags(flags){
+  const values=Array.isArray(flags)?flags:[];
+  const nodes=values.length
+    ? values.map(flag=>makeNode('span','flag',flag))
+    : [makeNode('span','flag clean','clean ✓')];
+  $('#qc-flags').replaceChildren(...nodes);
+}
+async function issueCapture(prompt){
+  return api('/api/captures',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt_id:prompt.id}),
+  });
+}
+function navigationBlocked(){
+  if(pendingReview){
+    toast('accept or reject the flagged take before navigating',true);
+    return true;
+  }
+  if(['arming','recording','have-take','saving'].includes(recState)){
+    toast('keep or redo the current take before navigating',true);
+    return true;
+  }
+  return false;
+}
 
 // ---- script + progress load ----
 async function loadScript(){
@@ -204,9 +275,10 @@ function applyState(pr, training){
   $('#btn-train').disabled = !(pr.ready || false);
   if(training) renderTrain(training);
   for(const row of pr.sections){
-    const el=document.querySelector(`[data-sec="${row.section}"] .sb>i`);
+    const item=[...document.querySelectorAll('#seclist li')].find(node=>node.dataset.sec===row.section);
+    const el=item?.querySelector('.sb>i');
     if(el){el.style.width=Math.round(row.coverage*100)+'%'; el.className=row.coverage>=0.8?'done':'';}
-    const cnt=document.querySelector(`[data-sec="${row.section}"] .cnt`);
+    const cnt=item?.querySelector('.cnt');
     if(cnt) cnt.textContent=`${row.recorded}/${row.total} · ${row.minutes.toFixed(1)}m`;
   }
 }
@@ -242,8 +314,11 @@ function renderTrain(t){
 function showPrompt(){
   const p=FLAT[cur]; if(!p) return;
   const isSpon=p.kind==='spontaneous';
-  $('#crumb').innerHTML=`<span class="kind ${p.kind}">${p.kind}</span> ${p._title}
-      <span style="color:var(--dim)">· ${p.id} · ${cur+1}/${FLAT.length}</span>`;
+  const kind=makeNode('span','kind',p.kind);
+  kind.classList.add(p.kind);
+  const position=makeNode('span','',`· ${p.id} · ${cur+1}/${FLAT.length}`);
+  position.style.color='var(--dim)';
+  $('#crumb').replaceChildren(kind,document.createTextNode(p._title),position);
   $('#prompt').className='prompt'+(p.text.length>90?' small':'');
   $('#prompt').textContent = isSpon ? '🗣  '+p.text : p.text;
   const ptt = isPushToTalk();
@@ -253,6 +328,13 @@ function showPrompt(){
        :"Read it the way you'd actually say it on the phone. Natural, not announcer-mode."))
     + (ptt ? '   ·   Hold Space to record, release when done.'
            : '   ·   Press Space to start, Space again to stop.');
+  $('#record-language').textContent=p.recording_language_tag||'natural';
+  $('#record-accent').textContent=p.recording_accent||'natural';
+  $('#record-delivery').textContent=p.recording_delivery||'neutral';
+  $('#synthesis-presentation').textContent=p.synthesis_presentation||'not assigned';
+  $('#calibration-badge').hidden=!p.calibration_optional;
+  $('#record-safety').textContent=(p.recording_safety_cue||'Use your natural voice and accent.')
+    +' The synthesis presentation is a downstream control; do not imitate its accent while recording.';
   $('#btn-rec').textContent = ptt ? '● Hold Space' : '● Record';
   resetTakeUI();
   const rec = p.recorded;
@@ -261,18 +343,21 @@ function showPrompt(){
   renderDots();
 }
 function resetTakeUI(){
-  lastBlob=null; lastIsUpload=false;
+  activeCapture=null; recState='idle'; pendingReview=null; reviewListened=false;
   $('#btn-play').disabled=true; $('#btn-save').disabled=true; $('#btn-redo').disabled=true;
+  $('#review-actions').hidden=true;
+  $('#review-reason').value='';
+  $('#btn-review-accept').disabled=true;
 }
 
 async function loadExistingQc(id){
   // pull the manifest record via /api/script cache (already have flags+duration there)
   const p=FLAT.find(x=>x.id===id); if(!p) return;
-  $('#qc-stats').innerHTML = `<div class="stat"><span>status</span> <b>already recorded</b></div>
-     <div class="stat"><span>duration</span> <b>${p.duration?.toFixed?.(2)??'—'}s</b></div>`;
-  $('#qc-flags').innerHTML = (p.flags&&p.flags.length)
-     ? p.flags.map(f=>`<span class="flag">${f}</span>`).join('')
-     : '<span class="flag clean">clean ✓</span>';
+  renderStats([
+    ['status','already recorded'],
+    ['duration',(p.duration?.toFixed?.(2)??'—')+'s'],
+  ]);
+  renderFlags(p.flags);
   const a=$('#review'); a.src=`/api/clip/${id}/audio?t=`+Date.now();
   $('#qc-transcript').textContent='';
 }
@@ -326,84 +411,141 @@ function pickMime(){
   return '';
 }
 async function startRec(){
-  if(recState==='recording') return;
-  await ensureMic();
-  if(recState==='recording') return;          // re-entry guard (async gap)
-  chunks=[]; const mime=pickMime();
-  mediaRec = new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
-  mediaRec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-  mediaRec.onstop=()=>{
-    lastBlob=new Blob(chunks,{type: mediaRec.mimeType||'audio/webm'}); lastIsUpload=false;
-    peakHold=-120;
-    $('#btn-rec').textContent=isPushToTalk()?'● Hold Space':'● Record';
-    $('#btn-rec').classList.remove('active');
-    $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
-    recState='have-take';
-  };
-  mediaRec.start();
-  recState='recording'; peakHold=-120;
-  $('#btn-rec').textContent='■ Stop'; $('#btn-rec').classList.add('active');
-  if(pttReleasePending){ pttReleasePending=false; stopRec(); }   // released mid-start
+  if(recState!=='idle') return;
+  const prompt=FLAT[cur]; if(!prompt) return;
+  recState='arming'; $('#btn-rec').disabled=true;
+  try{
+    await ensureMic();
+    const authorization=await issueCapture(prompt);
+    const capture=bindCapture(prompt,authorization,'browser-mic');
+    const mime=pickMime();
+    const recorder=new MediaRecorder(micStream,mime?{mimeType:mime}:undefined);
+    capture.recorder=recorder; activeCapture=capture;
+    recorder.ondataavailable=e=>{if(e.data.size)appendCaptureChunk(capture,e.data);};
+    recorder.onerror=()=>{toast('browser recorder failed — redo this take',true);resetTakeUI();};
+    recorder.onstop=()=>{
+      try{finalizeCapture(capture,recorder.mimeType||'audio/webm');}
+      catch(e){toast('empty recording — please redo',true);resetTakeUI();return;}
+      peakHold=-120;
+      $('#btn-rec').textContent=isPushToTalkFor(prompt)?'● Hold Space':'● Record';
+      $('#btn-rec').classList.remove('active');
+      $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
+      recState='have-take';
+    };
+    recorder.start();
+    recState='recording'; peakHold=-120;
+    $('#btn-rec').textContent='■ Stop'; $('#btn-rec').classList.add('active');
+    if(pttReleasePending){pttReleasePending=false;stopRec();}
+  }catch(e){
+    resetTakeUI();
+    toast('recording could not start: '+e.message,true);
+  }finally{
+    $('#btn-rec').disabled=false;
+  }
 }
-function stopRec(){ if(recState==='recording' && mediaRec) mediaRec.stop(); }
+function stopRec(){
+  if(recState==='recording' && activeCapture?.recorder) activeCapture.recorder.stop();
+}
 async function toggleRec(){ if(recState==='recording') stopRec(); else await startRec(); }
-function isPushToTalk(){ const p=FLAT[cur]; return !!p && ['read','spell','conversational'].includes(p.kind); }
-function playTake(){ if(!lastBlob)return; const a=new Audio(URL.createObjectURL(lastBlob)); a.play(); }
+function isPushToTalkFor(prompt){return !!prompt&&['read','spell','conversational'].includes(prompt.kind);}
+function isPushToTalk(){return isPushToTalkFor(FLAT[cur]);}
+function playTake(){
+  if(!activeCapture?.blob)return;
+  const url=URL.createObjectURL(activeCapture.blob);
+  const audio=new Audio(url);
+  audio.onended=()=>URL.revokeObjectURL(url);
+  audio.play().catch(()=>URL.revokeObjectURL(url));
+}
 
 async function saveTake(){
-  if(!lastBlob) return;
-  $('#btn-save').disabled=true; $('#btn-save').textContent='processing…';
-  const fd=new FormData();
-  const ext = lastBlob.type.includes('mp4')?'m4a':lastBlob.type.includes('ogg')?'ogg':'webm';
-  fd.append('file', lastBlob, `take.${ext}`);
-  fd.append('prompt_id', FLAT[cur].id);
-  fd.append('denoise', $('#denoise').checked? 'true':'false');
-  fd.append('source', lastIsUpload?'upload':'browser-mic');
+  if(!activeCapture?.blob||recState!=='have-take') return;
+  const capture=activeCapture;
+  recState='saving'; $('#btn-save').disabled=true; $('#btn-save').textContent='processing…';
   try{
+    const fd=buildCaptureForm(capture,$('#denoise').checked);
     const d=await api('/api/clip',{method:'POST',body:fd});
     showQc(d.record);
-    FLAT[cur].recorded=true; FLAT[cur].flags=d.record.qc.flags; FLAT[cur].duration=d.record.qc.duration;
+    const prompt=FLAT.find(item=>item.id===d.record.id);
+    if(prompt){
+      prompt.recorded=prompt.recorded||d.record.persistence.accepted;
+      if(d.record.persistence.accepted) prompt.flags=d.record.qc.flags;
+      prompt.duration=d.record.qc.duration;
+    }
+    activeCapture=null; recState='idle';
+    $('#btn-play').disabled=true; $('#btn-redo').disabled=true;
+    renderSecList(); renderDots();
     renderTrain(d.training); await refreshProgress();
-    toast(d.record.qc.flags.length? ('saved — flagged: '+d.record.qc.flags.join(', '))
-                                   : 'saved ✓ clean');
+    toast(d.record.persistence.accepted?'saved ✓ accepted':'stored for review — it has not replaced an accepted take');
     if(d.training.state==='launched') toast('🚀 readiness gate met — training launched on the training host');
-  }catch(e){ toast('save failed: '+e.message, true); }
-  finally{ $('#btn-save').textContent='✓ Keep & process'; $('#btn-save').disabled=false; }
+  }catch(e){
+    try{
+      const prompt=FLAT.find(item=>item.id===capture.promptId);
+      const renewed=bindCapture(prompt,await issueCapture(prompt),capture.source);
+      attachUpload(renewed,capture.blob);
+      activeCapture=renewed; recState='have-take';
+      toast('save failed; the take is retained with a fresh one-use receipt: '+e.message,true);
+    }catch(renewError){
+      resetTakeUI();
+      toast('save failed and receipt renewal failed: '+renewError.message,true);
+    }
+  }finally{
+    $('#btn-save').textContent='✓ Keep & process';
+    $('#btn-save').disabled=recState!=='have-take';
+  }
 }
 function showQc(r){
   $('#qc').style.display='block';
   const q=r.qc;
-  $('#qc-stats').innerHTML=[
+  renderStats([
     ['duration', (q.duration?.toFixed(2)??'—')+'s'],
     ['loudness', (q.loudness_lufs??'—')+' LUFS'],
     ['peak', (q.peak_dbfs??'—')+' dBFS'],
     ['SNR', (q.snr_db??'—')+' dB'],
     ['denoise', q.noise_reduced?'on':'off'],
     ['WER', q.wer==null?'n/a':(q.wer*100).toFixed(0)+'%'],
-  ].map(([k,v])=>`<div class="stat"><span>${k}</span> <b>${v}</b></div>`).join('');
-  $('#qc-flags').innerHTML = q.flags.length? q.flags.map(f=>`<span class="flag">${f}</span>`).join('')
-                                           : '<span class="flag clean">clean ✓</span>';
-  const a=$('#review'); a.src=`/api/clip/${r.id}/audio?t=`+Date.now();
+  ]);
+  renderFlags(q.flags);
+  const a=$('#review'); a.src=r.review_audio_url+'?t='+Date.now();
   $('#qc-transcript').textContent = r.asr_hypothesis? ('heard: "'+r.asr_hypothesis+'"'):'';
+  const needsReview=!r.persistence.accepted;
+  pendingReview=needsReview?{
+    takeId:r.persistence.take_id,
+    promptId:r.id,
+    expectedGeneration:r.persistence.generation,
+    flags:q.flags,
+  }:null;
+  reviewListened=false;
+  $('#review-actions').hidden=!needsReview;
+  $('#review-reason').value='';
+  $('#btn-review-accept').disabled=true;
 }
 
 // ---- upload ----
-$('#up-input').addEventListener('change', e=>{
+$('#up-input').addEventListener('change', async e=>{
   const f=e.target.files[0]; if(!f)return;
-  lastBlob=f; lastIsUpload=true;
-  $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
-  toast('loaded '+f.name+' — Keep & process to standardize');
+  if(recState!=='idle'){toast('finish the current take before loading a file',true);e.target.value='';return;}
+  const prompt=FLAT[cur]; recState='arming';
+  try{
+    activeCapture=bindCapture(prompt,await issueCapture(prompt),'upload');
+    attachUpload(activeCapture,f); recState='have-take';
+    $('#btn-play').disabled=false; $('#btn-save').disabled=false; $('#btn-redo').disabled=false;
+    toast('loaded '+f.name+' for '+prompt.id+' — Keep & process to standardize');
+  }catch(error){resetTakeUI();toast('upload could not be authorized: '+error.message,true);}
+  finally{e.target.value='';}
 });
 
 // ---- room tone ----
 async function sampleRoomTone(){
+  if(recState!=='idle'){toast('finish the current voice take first',true);return;}
   await ensureMic();
   toast('recording 4s of room tone — stay silent…');
-  chunks=[]; const mime=pickMime();
+  const collector=createChunkCollector(); const mime=pickMime();
   const mr=new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
-  mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  mr.ondataavailable=e=>{if(e.data.size)collector.push(e.data);};
   mr.onstop=async()=>{
-    const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
+    let blob;
+    try{blob=collector.toBlob(mr.mimeType||'audio/webm');}
+    catch(error){toast('room tone was empty: '+error.message,true);return;}
     const fd=new FormData(); fd.append('file',blob,'roomtone.webm');
     try{ const d=await api('/api/roomtone',{method:'POST',body:fd});
       $('#roomtone-pill').textContent=`room tone: ${d.room_tone_sec}s`; $('#roomtone-pill').className='pill on';
@@ -414,26 +556,76 @@ async function sampleRoomTone(){
 }
 
 // ---- nav + side ----
-function go(d){ cur=(cur+d+FLAT.length)%FLAT.length; showPrompt(); }
-function nextGap(){ const n=FLAT.findIndex((p,i)=>i>cur && !p.recorded);
+function go(d){if(navigationBlocked()||!FLAT.length)return;cur=(cur+d+FLAT.length)%FLAT.length;showPrompt();}
+function nextGap(){if(navigationBlocked())return;const n=FLAT.findIndex((p,i)=>i>cur && !p.recorded);
   cur = n>=0? n : FLAT.findIndex(p=>!p.recorded); if(cur<0)cur=0; showPrompt(); }
 function renderSecList(){
-  $('#seclist').innerHTML = SECTIONS.map(s=>{
+  const items=SECTIONS.map(s=>{
     const rec=s.prompts.filter(p=>p.recorded).length;
-    return `<li data-sec="${s.section}" data-num="${s.num}">
-      <div class="top"><span>${s.section.replace('sec','§')} ${s.title.slice(0,26)}</span><span class="cnt">${rec}/${s.prompts.length}</span></div>
-      <div class="sb"><i style="width:0%"></i></div></li>`;
-  }).join('');
-  document.querySelectorAll('#seclist li').forEach(li=>li.onclick=()=>{
-    const sec=li.dataset.sec; cur=FLAT.findIndex(p=>p.section===sec); if(cur>=0)showPrompt();
+    const item=makeNode('li'); item.dataset.sec=s.section; item.dataset.num=String(s.num);
+    const top=makeNode('div','top');
+    top.append(
+      makeNode('span','',s.section.replace('sec','§')+' '+s.title.slice(0,26)),
+      makeNode('span','cnt',`${rec}/${s.prompts.length}`),
+    );
+    const bar=makeNode('div','sb'); const fill=makeNode('i'); fill.style.width='0%'; bar.append(fill);
+    item.append(top,bar);
+    item.onclick=()=>{
+      if(navigationBlocked())return;
+      const index=FLAT.findIndex(p=>p.section===s.section);if(index>=0){cur=index;showPrompt();}
+    };
+    return item;
   });
+  $('#seclist').replaceChildren(...items);
 }
 function renderDots(){
-  $('#dotgrid').innerHTML = FLAT.map((p,i)=>{
+  const dots=FLAT.map((p,i)=>{
     const cls = i===cur?'dot cur':(p.flags&&p.flags.length?'dot flag':p.recorded?'dot done':'dot');
-    return `<span class="${cls}" data-i="${i}" title="${p.id}"></span>`;
-  }).join('');
-  document.querySelectorAll('.dot').forEach(d=>d.onclick=()=>{cur=+d.dataset.i;showPrompt();});
+    const dot=makeNode('span',cls);dot.dataset.i=String(i);dot.title=p.id;
+    dot.onclick=()=>{if(!navigationBlocked()){cur=i;showPrompt();}};
+    return dot;
+  });
+  $('#dotgrid').replaceChildren(...dots);
+}
+
+function updateReviewButton(){
+  const reason=$('#review-reason').value.trim();
+  $('#btn-review-accept').disabled=!(pendingReview&&reviewListened&&reason.length>=12);
+}
+async function acceptReviewedTake(){
+  if(!pendingReview||!reviewListened)return;
+  const review={...pendingReview};
+  const reason=$('#review-reason').value.trim();
+  if(reason.length<12)return;
+  $('#btn-review-accept').disabled=true;
+  try{
+    const result=await api(`/api/reviews/${encodeURIComponent(review.takeId)}/accept`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({reason,expected_generation:review.expectedGeneration}),
+    });
+    const prompt=FLAT.find(item=>item.id===review.promptId);
+    if(prompt){prompt.recorded=true;prompt.flags=review.flags;}
+    pendingReview=null; $('#review-actions').hidden=true;
+    renderSecList();renderDots();renderTrain(result.training);applyState(result.progress,result.training);
+    toast('reviewed take accepted; QC flags remain visible');
+  }catch(error){toast('review acceptance failed: '+error.message,true);updateReviewButton();}
+}
+async function rejectReviewedTake(){
+  if(!pendingReview)return;
+  const review={...pendingReview};
+  $('#btn-review-reject').disabled=true;
+  try{
+    await api(`/api/reviews/${encodeURIComponent(review.takeId)}/reject`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        reason:'Satraj rejected this take in the studio review flow.',
+        expected_generation:review.expectedGeneration,
+      }),
+    });
+    pendingReview=null;showPrompt();
+    toast('flagged take rejected — the prior accepted take, if any, is unchanged');
+  }catch(error){toast('review rejection failed: '+error.message,true);}
+  finally{$('#btn-review-reject').disabled=false;}
 }
 
 // ---- settings + train ----
@@ -456,7 +648,7 @@ async function startTraining(){
 $('#btn-rec').onclick=toggleRec;
 $('#btn-play').onclick=playTake;
 $('#btn-save').onclick=saveTake;
-$('#btn-redo').onclick=()=>{resetTakeUI();toast('take discarded — record again');};
+$('#btn-redo').onclick=()=>{resetTakeUI();if(!FLAT[cur]?.recorded)$('#qc').style.display='none';toast('take discarded — record again');};
 $('#btn-prev').onclick=()=>go(-1);
 $('#btn-next').onclick=()=>go(1);
 $('#btn-skipnext').onclick=nextGap;
@@ -465,13 +657,18 @@ $('#btn-train').onclick=startTraining;
 $('#auto-train').onchange=pushSettings;
 $('#denoise').onchange=pushSettings;
 $('#whisper-model').onchange=pushSettings;
+$('#review').addEventListener('ended',()=>{if(pendingReview){reviewListened=true;updateReviewButton();}});
+$('#review-reason').addEventListener('input',updateReviewButton);
+$('#btn-review-accept').onclick=acceptReviewedTake;
+$('#btn-review-reject').onclick=rejectReviewedTake;
 document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
   if(e.code==='Space'){
     e.preventDefault();
     if(e.repeat) return;                       // ignore auto-repeat while held
     if(isPushToTalk()){
-      if(recState!=='recording'){ pttHeld=true; pttReleasePending=false; startRec(); }
+      if(recState==='idle'){ pttHeld=true; pttReleasePending=false; startRec(); }
+      else if(recState==='recording') return;
     } else {
       toggleRec();                             // long-form: press to start, again to stop
     }
@@ -488,13 +685,13 @@ document.addEventListener('keyup',e=>{
 async function loadSettings(){
   try{ const s=await api('/api/settings');
     window._wm=s.whisper_model||'base.en';
-    $('#auto-train').checked=s.auto_train!==false;
+    $('#auto-train').checked=s.auto_train===true;
     $('#denoise').checked=s.denoise!==false;
     const wm=$('#whisper-model'); if(wm) wm.value=window._wm;
   }catch(_){}
 }
 loadSettings();
-loadScript().catch(e=>{$('#crumb').innerHTML='<span class="err">load failed: '+e.message+'</span>';});
+loadScript().catch(e=>{const node=makeNode('span','err','load failed: '+e.message);$('#crumb').replaceChildren(node);});
 connectSSE();
 // Fallback poll at 60s only — SSE carries live updates; this just resyncs if the
 // stream silently dropped. Skipped while recording to keep the meter smooth.

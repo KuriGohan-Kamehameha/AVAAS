@@ -79,7 +79,12 @@ def initialize(root: Path, sections: list[dict]) -> Store:
     return store
 
 
-def append_record(root: Path, record: dict) -> dict:
+def append_record(
+    root: Path,
+    record: dict,
+    *,
+    expected_generation: int | None = None,
+) -> dict:
     """Persist a processed capture atomically and accept only passing QC."""
     if not isinstance(record, dict) or "id" not in record:
         raise StoreContractError("record needs an id")
@@ -178,6 +183,15 @@ def append_record(root: Path, record: dict) -> dict:
             else "review_required"
         )
     state = store.acceptance_state(record["id"], snapshot["corpus_version"])
+    current_generation = state["generation"] if state is not None else 0
+    if expected_generation is None:
+        expected_generation = current_generation
+    if (
+        not isinstance(expected_generation, int)
+        or isinstance(expected_generation, bool)
+        or expected_generation < 0
+    ):
+        raise StoreContractError("invalid expected capture generation")
     result = store.commit_capture(
         take_id=take_id,
         prompt_id=record["id"],
@@ -194,7 +208,7 @@ def append_record(root: Path, record: dict) -> dict:
             "metrics": qc,
             "transcript": record.get("transcript"),
         },
-        expected_generation=state["generation"] if state is not None else 0,
+        expected_generation=expected_generation,
         override_reason=record.get("override_reason"),
     )
     return result
