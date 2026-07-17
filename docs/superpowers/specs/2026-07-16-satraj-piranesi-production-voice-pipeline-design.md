@@ -537,6 +537,14 @@ resolution records a full lock and hashes. Moving to another release requires
 the same smoke, license, export, inference, and target-hardware gates; a floating
 branch is never a training input.
 
+The initial compatible `medium` checkpoint is pinned to repository
+`rhasspy/piper-checkpoints` at commit
+`95a4b650bd38716c97caf16d07b2a1734859f91a`, path
+`en/en_US/ljspeech/medium/lj-med_1000.ckpt`, with SHA-256
+`dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c`.
+Its repository license is MIT and its LJSpeech source corpus is public domain.
+The job contract carries all four values and refuses a mismatch before training.
+
 Training cache and checkpoints are resumable and stored on durable capacity.
 The worker never stops unrelated inference services automatically. A resource
 preflight checks available host RAM, VRAM, disk, temperature, GPU health, and

@@ -204,3 +204,31 @@ def test_retry_cancel_and_restart_recovery_have_fixed_ceilings(tmp_path: Path) -
     assert restarted is not None
     assert restarted["state"] == "failed"
     assert restarted["attempts"] == training_jobs.MAX_RETRIES
+
+
+def test_piper_job_pins_the_exact_medium_base_checkpoint_and_license(tmp_path: Path) -> None:
+    _sections, report = _ready(tmp_path)
+    result = training_jobs.build_bundle(
+        tmp_path,
+        readiness_report=report,
+        engine="piper",
+        profile="medium",
+        idempotency_key="piper-base-checkpoint-pin",
+        promotable=True,
+        now_iso="2026-07-16T21:00:00Z",
+    )
+    manifest = json.loads((result["path"] / "job.json").read_text(encoding="utf-8"))
+    assert manifest["source_pins"] == {
+        "code": "OHF-Voice/piper1-gpl@d6975e21a440c0d8b6e5fb7c41027409af13d44d",
+        "release": "1.4.2",
+        "license": "GPL-3.0-only",
+        "base_checkpoint_repository": (
+            "rhasspy/piper-checkpoints@95a4b650bd38716c97caf16d07b2a1734859f91a"
+        ),
+        "base_checkpoint_path": "en/en_US/ljspeech/medium/lj-med_1000.ckpt",
+        "base_checkpoint_sha256": (
+            "dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c"
+        ),
+        "base_checkpoint_license": "MIT",
+        "base_training_data_license": "Public-Domain",
+    }

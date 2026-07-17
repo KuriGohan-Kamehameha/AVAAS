@@ -96,6 +96,12 @@ The voice does not mutate online after every take. Releases are versioned:
 4. Later accepted recordings can seed a new candidate release, so the voice improves in
    controlled generations rather than changing underneath live calls.
 
+The deterministic Piper fallback starts from the exact MIT-licensed LJSpeech
+`medium` checkpoint at `rhasspy/piper-checkpoints@95a4b650bd38716c97caf16d07b2a1734859f91a`,
+path `en/en_US/ljspeech/medium/lj-med_1000.ckpt`, SHA-256
+`dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c`.
+The training gate rejects a missing or different source, path, digest, or license.
+
 ## Using the recording script
 
 The authoritative declarations live under `prompts/`. They compile one human

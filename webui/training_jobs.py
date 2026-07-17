@@ -90,6 +90,15 @@ ENGINE_PROFILES = {
             "code": "OHF-Voice/piper1-gpl@d6975e21a440c0d8b6e5fb7c41027409af13d44d",
             "release": "1.4.2",
             "license": "GPL-3.0-only",
+            "base_checkpoint_repository": (
+                "rhasspy/piper-checkpoints@95a4b650bd38716c97caf16d07b2a1734859f91a"
+            ),
+            "base_checkpoint_path": "en/en_US/ljspeech/medium/lj-med_1000.ckpt",
+            "base_checkpoint_sha256": (
+                "dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c"
+            ),
+            "base_checkpoint_license": "MIT",
+            "base_training_data_license": "Public-Domain",
         },
     },
 }
@@ -667,6 +676,8 @@ def _validate_bundle(root: Path, *, require_ready: bool) -> dict[str, Any]:
             "avaas_local",
             "cosyvoice3-code" if manifest["engine"] == "cosyvoice3" else "piper-code",
         }
+        if manifest["engine"] == "piper":
+            required_licenses.add("piper-ljspeech-medium-base")
         if (
             len(license_ids) != len(licenses["licenses"])
             or len(set(license_ids)) != len(license_ids)

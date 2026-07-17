@@ -42,6 +42,13 @@ ENGINE_LICENSES = (
         "source_revision": "OHF-Voice/piper1-gpl@d6975e21a440c0d8b6e5fb7c41027409af13d44d",
         "distribution_restrictions": "Piper remains an independently deployed GPL service boundary.",
     },
+    {
+        "id": "piper-ljspeech-medium-base",
+        "license_name": "MIT / Public-Domain training data",
+        "license_url": "https://huggingface.co/datasets/rhasspy/piper-checkpoints/tree/95a4b650bd38716c97caf16d07b2a1734859f91a/en/en_US/ljspeech/medium",
+        "source_revision": "rhasspy/piper-checkpoints@95a4b650bd38716c97caf16d07b2a1734859f91a:en/en_US/ljspeech/medium/lj-med_1000.ckpt#sha256=dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c",
+        "distribution_restrictions": "Retain the checkpoint repository notice and its public-domain LJSpeech dataset provenance.",
+    },
 )
 
 

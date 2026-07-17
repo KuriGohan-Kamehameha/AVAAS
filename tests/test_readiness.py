@@ -43,6 +43,7 @@ def test_ready_report_has_stable_grouped_splits_references_and_licenses(tmp_path
         "cosyvoice3-code",
         "cosyvoice3-model",
         "piper-code",
+        "piper-ljspeech-medium-base",
     }
     assert len(first["corpus_sha256"]) == 64
     assert len(first["split_sha256"]) == 64
