@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avaas.invalid/schemas/voice-model-v1.schema.json",
+  "title": "AVAAS immutable Piper voice model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "artifact_id",
+    "model_id",
+    "version",
+    "speaker_id",
+    "aliases",
+    "presentations",
+    "engine",
+    "audio",
+    "files",
+    "provenance",
+    "validation",
+    "evaluation",
+    "target_compatibility",
+    "promotable",
+    "created_at",
+    "author"
+  ],
+  "properties": {
+    "schema": {"const": "avaas/voice-model@v1"},
+    "artifact_id": {"$ref": "#/$defs/slug"},
+    "model_id": {"const": "satraj-piranesi"},
+    "version": {"$ref": "#/$defs/semver"},
+    "speaker_id": {"const": "satraj"},
+    "aliases": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/satrajAlias"},
+        {"$ref": "#/$defs/piranesiAlias"}
+      ],
+      "items": false
+    },
+    "presentations": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/presentation"}
+    },
+    "engine": {
+      "const": {
+        "name": "piper",
+        "version": "1.4.2",
+        "commit": "d6975e21a440c0d8b6e5fb7c41027409af13d44d",
+        "architecture": "medium"
+      }
+    },
+    "audio": {
+      "const": {
+        "native_sample_rate_hz": 22050,
+        "serving_sample_rate_hz": 24000,
+        "channels": 1,
+        "sample_format": "pcm_s16le"
+      }
+    },
+    "files": {
+      "type": "object",
+      "minProperties": 8,
+      "maxProperties": 8
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "corpus_manifest_sha256",
+        "split_sha256",
+        "dsp_sha256",
+        "base_checkpoint_sha256",
+        "trainer_sha256",
+        "source_commits"
+      ],
+      "properties": {
+        "corpus_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "split_sha256": {"$ref": "#/$defs/sha256"},
+        "dsp_sha256": {"$ref": "#/$defs/sha256"},
+        "base_checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+        "trainer_sha256": {"$ref": "#/$defs/sha256"},
+        "source_commits": {"$ref": "#/$defs/sourceCommits"}
+      }
+    },
+    "validation": {"$ref": "#/$defs/backendValidation"},
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_sha256", "passed", "thresholds", "measured"],
+      "properties": {
+        "report_sha256": {"$ref": "#/$defs/sha256"},
+        "passed": {"const": true},
+        "thresholds": {"type": "object", "minProperties": 1, "maxProperties": 32},
+        "measured": {"type": "object", "minProperties": 1, "maxProperties": 32}
+      }
+    },
+    "target_compatibility": {
+      "const": [
+        "kudzu-vox/legacy-tts@v1",
+        "openai/audio-speech@v1",
+        "astroclaw/pcm24@v1"
+      ]
+    },
+    "promotable": {"type": "boolean"},
+    "created_at": {"$ref": "#/$defs/created"},
+    "author": {"const": "CPCS"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,126}[a-z0-9])?$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$"
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "sourceCommits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["avaas", "piranesi_workspace"],
+      "properties": {
+        "avaas": {"$ref": "#/$defs/commit"},
+        "piranesi_workspace": {"$ref": "#/$defs/commit"}
+      }
+    },
+    "backendValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu", "cuda"],
+      "properties": {
+        "cpu": {"const": {"passed": true}},
+        "cuda": {"const": {"passed": true}}
+      }
+    },
+    "aliasBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "model_sha256", "default_presentation"],
+      "properties": {
+        "id": {"enum": ["satraj", "piranesi"]},
+        "model_sha256": {"$ref": "#/$defs/sha256"},
+        "default_presentation": {"$ref": "#/$defs/slug"}
+      }
+    },
+    "satrajAlias": {
+      "allOf": [
+        {"$ref": "#/$defs/aliasBase"},
+        {"properties": {"id": {"const": "satraj"}, "default_presentation": {"const": "satraj.en-ca.neutral"}}}
+      ]
+    },
+    "piranesiAlias": {
+      "allOf": [
+        {"$ref": "#/$defs/aliasBase"},
+        {"properties": {"id": {"const": "piranesi"}, "default_presentation": {"const": "piranesi.en-gb.neutral"}}}
+      ]
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "alias", "speaker_id", "language_tag", "phonemizer_voice", "accent", "delivery"],
+      "properties": {
+        "id": {"$ref": "#/$defs/slug"},
+        "alias": {"enum": ["satraj", "piranesi"]},
+        "speaker_id": {"type": "integer", "minimum": 0, "maximum": 15},
+        "language_tag": {"type": "string", "minLength": 2, "maxLength": 16},
+        "phonemizer_voice": {"type": "string", "minLength": 1, "maxLength": 32},
+        "accent": {"type": "string", "minLength": 1, "maxLength": 64},
+        "delivery": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    }
+  }
+}

@@ -20,8 +20,11 @@ Run:  cd ~/voice && .venv/bin/python -m uvicorn webui.server:app --port 8731
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import os
+import re
+import stat
 import tempfile
 import time
 import uuid
@@ -57,6 +60,8 @@ MAX_MULTIPART_BYTES = ingest.MAX_UPLOAD_BYTES + 1024 * 1024
 MAX_ROOM_TONE_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_SETTINGS_BYTES = 64 * 1024
 MAX_JSON_BODY_BYTES = 4 * 1024
+MAX_STATUS_TOKEN_BYTES = 256
+_STATUS_TOKEN_RE = re.compile(rb"^[A-Za-z0-9_-]{32,256}$")
 
 @asynccontextmanager
 async def _lifespan(_application: FastAPI):
@@ -151,6 +156,95 @@ def _capture_codec() -> capture_tokens.CaptureTokenCodec:
 
 def _trainer_health() -> dict | None:
     return readiness.load_trainer_health(ROOT)
+
+
+def _status_token() -> bytes:
+    """Read an operator-provisioned bearer secret without following links."""
+
+    path = ROOT / "data" / "status-api-token"
+    descriptor = -1
+    try:
+        metadata = os.lstat(path)
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_mode & 0o077
+            or not 32 <= metadata.st_size <= MAX_STATUS_TOKEN_BYTES
+        ):
+            raise OSError("unsafe status token metadata")
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        observed = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(observed.st_mode)
+            or observed.st_ino != metadata.st_ino
+            or observed.st_dev != metadata.st_dev
+            or observed.st_size != metadata.st_size
+        ):
+            raise OSError("status token changed")
+        chunks: list[bytes] = []
+        total = 0
+        for _index in range(MAX_STATUS_TOKEN_BYTES + 1):
+            chunk = os.read(descriptor, MAX_STATUS_TOKEN_BYTES + 1 - total)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        token = b"".join(chunks)
+        if (
+            len(token) != observed.st_size
+            or os.read(descriptor, 1)
+            or _STATUS_TOKEN_RE.fullmatch(token) is None
+        ):
+            raise OSError("invalid status token")
+        return token
+    except OSError as exc:
+        raise HTTPException(503, "operator status API is not configured") from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def _authorize_status(request: Request) -> None:
+    authorization = request.headers.get("authorization", "")
+    if (
+        not authorization.startswith("Bearer ")
+        or not 7 + 32 <= len(authorization) <= 7 + MAX_STATUS_TOKEN_BYTES
+    ):
+        raise HTTPException(
+            401,
+            "bearer authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    supplied = authorization[7:].encode("utf-8", errors="surrogatepass")
+    if not hmac.compare_digest(supplied, _status_token()):
+        raise HTTPException(
+            401,
+            "invalid bearer credential",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def _public_job(job: dict | None) -> dict | None:
+    if job is None:
+        return None
+    return {
+        key: job[key]
+        for key in (
+            "job_id",
+            "engine",
+            "profile",
+            "state",
+            "generation",
+            "attempts",
+            "deadline_epoch",
+            "detail",
+            "promotable",
+            "fixture",
+            "manifest_sha256",
+            "created_at_epoch",
+            "updated_at_epoch",
+        )
+    }
 
 
 async def _json_object(request: Request) -> dict:
@@ -349,6 +443,60 @@ def api_progress() -> JSONResponse:
     st = trainer.status(ROOT, prog)
     return JSONResponse({"progress": prog, "training": st,
                          "qc_available": qc_transcribe.available()})
+
+
+@app.get("/api/status/job")
+def api_status_job(request: Request) -> JSONResponse:
+    """Return the latest persisted training job; never launch or transition it."""
+
+    _authorize_status(request)
+    job = training_jobs.JobStore(ROOT).latest()
+    return JSONResponse(
+        {"schema": "avaas/operator-job-status@v1", "job": _public_job(job)},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/api/status/jobs/{job_id}")
+def api_status_job_by_id(job_id: str, request: Request) -> JSONResponse:
+    """Return one persisted training job without exposing its filesystem path."""
+
+    _authorize_status(request)
+    try:
+        job = training_jobs.JobStore(ROOT).get(job_id)
+    except training_jobs.JobContractError as exc:
+        raise HTTPException(400, "invalid job id") from exc
+    if job is None:
+        raise HTTPException(404, "training job not found")
+    return JSONResponse(
+        {"schema": "avaas/operator-job-status@v1", "job": _public_job(job)},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/api/status/artifacts")
+def api_status_artifacts(request: Request) -> JSONResponse:
+    """Return bounded artifact receipts; activation is intentionally not an API."""
+
+    _authorize_status(request)
+    store = Store(ROOT)
+    connection = store._connect(read_only=True)
+    try:
+        rows = connection.execute(
+            "SELECT artifact_id,job_id,schema_name,manifest_sha256,promotable,created_at "
+            "FROM artifacts ORDER BY created_at DESC,artifact_id DESC LIMIT 100"
+        ).fetchall()
+    finally:
+        connection.close()
+    values = []
+    for row in rows:
+        item = dict(row)
+        item["promotable"] = bool(item["promotable"])
+        values.append(item)
+    return JSONResponse(
+        {"schema": "avaas/operator-artifact-status@v1", "artifacts": values},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.post("/api/captures", status_code=201)

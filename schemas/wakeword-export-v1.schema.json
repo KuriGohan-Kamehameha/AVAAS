@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avaas.invalid/schemas/wakeword-export-v1.schema.json",
+  "title": "AVAAS immutable personalized wakeword export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "export_id",
+    "version",
+    "phrase",
+    "source_artifact",
+    "synthesis",
+    "audio",
+    "clips",
+    "license_ledger",
+    "promotable",
+    "fixture",
+    "created_at",
+    "author"
+  ],
+  "properties": {
+    "schema": {"const": "avaas/wakeword-export@v1"},
+    "export_id": {"$ref": "#/$defs/slug"},
+    "version": {"$ref": "#/$defs/semver"},
+    "phrase": {
+      "const": {"text": "Hey Piranesi", "normalized": "hey piranesi", "language_tag": "en"}
+    },
+    "source_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "artifact_id",
+        "manifest_sha256",
+        "alias",
+        "presentation_id",
+        "engine",
+        "promotable"
+      ],
+      "properties": {
+        "schema": {"enum": ["avaas/voice-profile@v1", "avaas/voice-model@v1"]},
+        "artifact_id": {"$ref": "#/$defs/slug"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "alias": {"const": "piranesi"},
+        "presentation_id": {"const": "piranesi.en-gb.neutral"},
+        "engine": {"enum": ["cosyvoice3", "piper"]},
+        "promotable": {"type": "boolean"}
+      }
+    },
+    "synthesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "engine", "presentation_id", "normalizer", "source_sample_rates_hz"],
+      "properties": {
+        "schema": {"const": "avaas/wakeword-synthesis@v1"},
+        "engine": {"enum": ["cosyvoice3", "piper"]},
+        "presentation_id": {"const": "piranesi.en-gb.neutral"},
+        "normalizer": {"const": "avaas-wake-normalize/1"},
+        "source_sample_rates_hz": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {"enum": [16000, 22050, 24000, 48000]}
+        }
+      }
+    },
+    "audio": {"const": {"sample_rate_hz": 16000, "channels": 1, "sample_format": "pcm_s16le"}},
+    "clips": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_path", "manifest_sha256", "count", "total_frames"],
+      "properties": {
+        "manifest_path": {"const": "clips/manifest.json"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "count": {"type": "integer", "minimum": 1, "maximum": 512},
+        "total_frames": {"type": "integer", "minimum": 4000, "maximum": 28800000}
+      }
+    },
+    "license_ledger": {"const": {"path": "provenance/licenses.json"}},
+    "promotable": {"type": "boolean"},
+    "fixture": {"type": "boolean"},
+    "created_at": {"$ref": "#/$defs/created"},
+    "author": {"const": "CPCS"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"fixture": {"const": true}}},
+      "then": {"properties": {"promotable": {"const": false}}}
+    },
+    {
+      "if": {"properties": {"promotable": {"const": true}}},
+      "then": {"properties": {"source_artifact": {"properties": {"promotable": {"const": true}}}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,126}[a-z0-9])?$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$"
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  }
+}
