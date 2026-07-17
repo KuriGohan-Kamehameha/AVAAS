@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -65,6 +66,28 @@ def test_decode_and_sample_contracts_reject_malformed_nonfinite_silence_and_extr
         audio_contracts.validate_samples(np.zeros(48_000, dtype=np.float32), 48_000)
     with pytest.raises(audio_contracts.AudioContractError, match="duration"):
         audio_contracts.validate_samples(np.ones(100, dtype=np.float32) * 0.1, 48_000)
+
+
+def test_decode_accepts_wavex_float_container_emitted_by_debian_ffmpeg(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = write_input(tmp_path / "source.wav")
+    real_info = processing.sf.info
+
+    def debian_info(path: Path) -> SimpleNamespace:
+        observed = real_info(path)
+        return SimpleNamespace(
+            format="WAVEX",
+            subtype=observed.subtype,
+            channels=observed.channels,
+            samplerate=observed.samplerate,
+            frames=observed.frames,
+        )
+
+    monkeypatch.setattr(processing.sf, "info", debian_info)
+    decoded = processing.decode_to_48k_mono(source)
+    assert decoded.shape == (60_000,)
+    assert decoded.dtype == np.float32
 
 
 def test_clipping_is_preserved_as_review_required_evidence(tmp_path: Path) -> None:

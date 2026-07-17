@@ -136,7 +136,7 @@ def decode_to_48k_mono(
         except RuntimeError as exc:
             raise ProcessingError("ffmpeg decode produced an invalid WAV") from exc
         if (
-            info.format != "WAV"
+            info.format not in {"WAV", "WAVEX"}
             or info.subtype != "FLOAT"
             or info.channels != 1
             or info.samplerate != CAPTURE_SR
