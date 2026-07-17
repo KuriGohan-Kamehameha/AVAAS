@@ -21,10 +21,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import tempfile
 import time
 import uuid
-from pathlib import Path
+from contextlib import asynccontextmanager
+from pathlib import Path, PurePosixPath
 from typing import AsyncIterator
 
 import numpy as np
@@ -33,14 +35,59 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                StreamingResponse)
 
-from . import corpus, processing, qc_transcribe, script_parser, trainer
+from . import (
+    audio_contracts,
+    corpus,
+    ingest,
+    processing,
+    qc_transcribe,
+    script_parser,
+    trainer,
+)
+from .store import StoreContractError
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
 SETTINGS = ROOT / "data" / "studio_settings.json"
-MAX_UPLOAD_BYTES = 200 * 1024 * 1024     # 200 MB hard cap; P10 bounded input
+MAX_MULTIPART_BYTES = ingest.MAX_UPLOAD_BYTES + 1024 * 1024
+MAX_ROOM_TONE_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_SETTINGS_BYTES = 64 * 1024
 
-app = FastAPI(title="AVAAS")
+@asynccontextmanager
+async def _lifespan(_application: FastAPI):
+    global _EVENT_LOOP
+    _startup()
+    try:
+        yield
+    finally:
+        _EVENT_LOOP = None
+
+
+app = FastAPI(title="AVAAS", lifespan=_lifespan)
+
+
+@app.middleware("http")
+async def require_bounded_multipart(request: Request, call_next):
+    """Reject unframed/chunked multipart before Starlette spools any file."""
+    if request.method == "POST" and request.url.path in {"/api/clip", "/api/roomtone"}:
+        content_type = request.headers.get("content-type", "")
+        if not content_type.lower().startswith("multipart/form-data"):
+            return JSONResponse({"detail": "multipart/form-data required"}, status_code=415)
+        raw_length = request.headers.get("content-length")
+        if raw_length is None:
+            return JSONResponse({"detail": "bounded Content-Length required"}, status_code=411)
+        try:
+            length = int(raw_length)
+        except ValueError:
+            return JSONResponse({"detail": "invalid Content-Length"}, status_code=400)
+        maximum = (
+            MAX_ROOM_TONE_UPLOAD_BYTES + 1024 * 1024
+            if request.url.path == "/api/roomtone"
+            else MAX_MULTIPART_BYTES
+        )
+        if not 1 <= length <= maximum:
+            return JSONResponse({"detail": "request body too large"}, status_code=413)
+    return await call_next(request)
 
 # Parsed script is cached; cheap to rebuild when the manifest changes.
 _SECTIONS: list[dict] = []
@@ -87,29 +134,71 @@ def _load_sections() -> None:
 
 
 def _read_settings() -> dict:
-    import json
-    if SETTINGS.exists():
-        try:
-            return json.loads(SETTINGS.read_text())
-        except json.JSONDecodeError:
-            pass
-    return {"auto_train": True, "denoise": True}
+    defaults = {
+        "auto_train": False,
+        "denoise": True,
+        "whisper_model": "base.en",
+    }
+    try:
+        if SETTINGS.is_symlink() or not SETTINGS.is_file() or SETTINGS.stat().st_size > MAX_SETTINGS_BYTES:
+            return defaults
+        value = json.loads(SETTINGS.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return defaults
+    if not isinstance(value, dict) or set(value) - {
+        "auto_train",
+        "denoise",
+        "whisper_model",
+        "room_tone_path",
+    }:
+        return defaults
+    if not isinstance(value.get("auto_train", False), bool) or not isinstance(
+        value.get("denoise", True), bool
+    ):
+        return defaults
+    if value.get("whisper_model", "base.en") not in qc_transcribe.ALLOWED_MODELS:
+        return defaults
+    room_tone_path = value.get("room_tone_path")
+    if room_tone_path is not None and (
+        not isinstance(room_tone_path, str) or not 1 <= len(room_tone_path) <= 1_024
+    ):
+        return defaults
+    return {**defaults, **value}
 
 
 def _write_settings(data: dict) -> None:
-    import json
     SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-    SETTINGS.write_text(json.dumps(data, indent=2))
+    if SETTINGS.parent.is_symlink() or SETTINGS.is_symlink():
+        raise StoreContractError("settings path must not be a symlink")
+    encoded = (
+        json.dumps(data, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    ).encode("utf-8")
+    if len(encoded) > MAX_SETTINGS_BYTES:
+        raise StoreContractError("settings exceed bound")
+    descriptor, name = tempfile.mkstemp(prefix=".studio-settings.", dir=SETTINGS.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(SETTINGS)
+        directory = os.open(SETTINGS.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
-@app.on_event("startup")
 def _startup() -> None:
     global _EVENT_LOOP
     _load_sections()
     if not _SECTIONS:
         raise RuntimeError("no structured prompt sections compiled")
     corpus.initialize(ROOT, _SECTIONS)
-    _EVENT_LOOP = asyncio.get_event_loop()
+    _EVENT_LOOP = asyncio.get_running_loop()
     qc_transcribe.configure(_read_settings().get("whisper_model", "base.en"))
 
 
@@ -180,24 +269,45 @@ def api_progress() -> JSONResponse:
 # --------------------------------------------------------------------------- #
 # clip ingest  (sync def -> FastAPI threadpool; heavy DSP off the event loop)
 # --------------------------------------------------------------------------- #
-def _save_upload(upload: UploadFile) -> Path:
-    data = upload.file.read()
-    if not data:
-        raise HTTPException(400, "empty upload")
-    if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "upload too large")
-    suffix = Path(upload.filename or "clip").suffix or ".bin"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(data)
-        return Path(tmp.name)
+def _stage_upload(upload: UploadFile, *, maximum: int) -> ingest.StagedUpload:
+    try:
+        return ingest.stage_file(ROOT, upload.file, max_bytes=maximum)
+    except ingest.IngestError as exc:
+        message = str(exc)
+        status = 408 if "deadline" in message else 413 if "exceed" in message else 400
+        raise HTTPException(status, message) from exc
 
 
 def _room_tone() -> np.ndarray | None:
-    p = ROOT / "data" / "room_tone_48k.wav"
-    if not p.exists():
+    relative = _read_settings().get("room_tone_path")
+    if relative is None:
         return None
-    audio, _ = sf.read(str(p), dtype="float32")
-    return audio if audio.ndim == 1 else audio.mean(axis=1)
+    candidate = PurePosixPath(relative)
+    if candidate.is_absolute() or any(part in {"", ".", ".."} for part in candidate.parts):
+        return None
+    path = ROOT.joinpath(*candidate.parts)
+    try:
+        resolved = path.resolve(strict=True)
+        if ROOT.resolve() not in resolved.parents:
+            return None
+        audio_contracts.inspect_pcm16_wav(
+            path,
+            audio_contracts.AUDIO_SPECS["master-48k"],
+            min_seconds=0.1,
+            max_seconds=30.0,
+        )
+        audio, sample_rate = sf.read(path, dtype="float32", always_2d=False)
+        if sample_rate != processing.CAPTURE_SR:
+            return None
+        return audio_contracts.validate_samples(
+            audio,
+            sample_rate,
+            min_seconds=0.1,
+            max_seconds=30.0,
+            require_signal=False,
+        )
+    except (OSError, RuntimeError, audio_contracts.AudioContractError):
+        return None
 
 
 @app.post("/api/clip")
@@ -208,28 +318,89 @@ def api_clip(prompt_id: str = Form(...),
     prompt = _PROMPTS.get(prompt_id)
     if prompt is None:
         raise HTTPException(404, f"unknown prompt_id {prompt_id}")
+    if source not in {"browser-mic", "upload"}:
+        raise HTTPException(400, "unsupported capture source")
 
-    tmp = _save_upload(file)
+    staged_input = _stage_upload(file, maximum=ingest.MAX_UPLOAD_BYTES)
     capture_id = uuid.uuid4().hex
-    raw_out = ROOT / "data" / "raw" / f"{prompt_id}_{capture_id}_{prompt['slug']}.wav"
-    proc_out = ROOT / "data" / "processed" / f"{prompt_id}_{capture_id}_{prompt['slug']}.wav"
+    staging = ROOT / "data" / "staging"
+    output_paths = {
+        purpose: staging / f"dsp-{capture_id}-{purpose}.wav"
+        for purpose in audio_contracts.AUDIO_SPECS
+    }
     try:
-        qc = processing.standardize(tmp, raw_out, proc_out,
-                                    room_tone=self_or_none(denoise, _room_tone()),
-                                    denoise=denoise)
-    except Exception as e:
-        raise HTTPException(422, f"processing failed: {e}")
+        processed = processing.standardize(
+            staged_input.path,
+            output_paths,
+            room_tone=_room_tone() if denoise else None,
+            denoise=denoise,
+        )
+        publications: dict[str, ingest.PublishedContent] = {}
+        for purpose in audio_contracts.AUDIO_SPECS:
+            receipt = ingest.receipt_for_staged_path(ROOT, output_paths[purpose])
+            publications[purpose] = ingest.publish_content(
+                ROOT,
+                receipt,
+                label=purpose,
+                extension=".wav",
+            )
+    except processing.ProcessingError as exc:
+        raise HTTPException(422, f"processing failed: {exc}") from exc
+    except (ingest.IngestError, audio_contracts.AudioContractError) as exc:
+        raise HTTPException(422, f"audio publication failed: {exc}") from exc
     finally:
-        tmp.unlink(missing_ok=True)
+        staged_input.cleanup()
+        for path in output_paths.values():
+            path.unlink(missing_ok=True)
 
     # Ground truth for scripted lines is the script itself; Whisper only QCs.
-    hyp = qc_transcribe.transcribe(str(proc_out))
+    serve_path = ROOT / publications["serve-24k"].relative_path
+    asr = qc_transcribe.transcribe_result(str(serve_path), language="en")
+    hyp = asr["text"]
     wer_val = None
-    if hyp is not None and prompt["kind"] not in ("spontaneous",):
+    if asr["status"] == "ok" and hyp is not None and prompt["kind"] != "spontaneous":
         wer_val = qc_transcribe.wer(prompt["text"], hyp)
     transcript = prompt["text"] if prompt["kind"] != "spontaneous" else (hyp or "")
-    qc["wer"] = wer_val
-    qc["flags"] = corpus.qc_flags(qc, wer_val)
+    qc = processed["qc"]
+    qc.update(
+        {
+            "wer": wer_val,
+            "asr_status": asr["status"],
+            "asr_model": asr["model"],
+            "asr_reason": asr["reason"],
+        }
+    )
+    qc["flags"] = corpus.qc_flags(qc, wer_val, asr_status=asr["status"])
+    qc["status"] = (
+        "pass"
+        if not qc["flags"]
+        else "unavailable"
+        if asr["status"] == "unavailable"
+        else "review_required"
+    )
+
+    artifacts = {item["purpose"]: item for item in processed["artifacts"]}
+    derivatives = []
+    for purpose in ("serve-24k", "piper-22050", "wake-16k"):
+        artifact = artifacts[purpose]
+        publication = publications[purpose]
+        derivatives.append(
+            {
+                "purpose": purpose,
+                "path": publication.relative_path,
+                "sha256": publication.sha256,
+                "sample_rate": artifact["sample_rate"],
+                "channels": artifact["channels"],
+                "sample_format": artifact["sample_format"],
+                "frames": artifact["frames"],
+                "duration_ms": artifact["duration_ms"],
+                "parameters": {
+                    "schema": "avaas/audio-derivative@v1",
+                    "master_sha256": publications["master-48k"].sha256,
+                    "dsp": processed["dsp"],
+                },
+            }
+        )
 
     record = {
         "id": prompt_id, "section": prompt["section"], "idx": prompt["idx"],
@@ -239,22 +410,38 @@ def api_clip(prompt_id: str = Form(...),
         "voice_model_id": prompt["voice_model_id"],
         "identity": prompt["identity"],
         "prompt_source": prompt["source"],
-        "raw_path": str(raw_out.relative_to(ROOT)),
-        "processed_path": str(proc_out.relative_to(ROOT)),
-        "transcript": transcript, "asr_hypothesis": hyp,
-        "qc": qc, "source": source, "ts": _now(),
+        "recording_profile_id": prompt["recording_profile_id"],
+        "recording_language_tag": prompt["recording_language_tag"],
+        "recording_accent": prompt["recording_accent"],
+        "recording_delivery": prompt["recording_delivery"],
+        "recording_safety_cue": prompt["recording_safety_cue"],
+        "calibration_optional": prompt["calibration_optional"],
+        "synthesis_presentation": prompt["synthesis_presentation"],
+        "eligible_presentations": prompt["eligible_presentations"],
+        "raw_path": publications["master-48k"].relative_path,
+        "processed_path": publications["serve-24k"].relative_path,
+        "derivatives": derivatives,
+        "transcript": transcript,
+        "asr_hypothesis": hyp,
+        "asr": asr,
+        "dsp": processed["dsp"],
+        "qc": qc,
+        "source": source,
+        "ts": _now(),
     }
-    corpus.append_record(ROOT, record)
+    try:
+        persistence = corpus.append_record(ROOT, record)
+    except StoreContractError as exc:
+        raise HTTPException(409, "capture could not be committed") from exc
 
     prog = corpus.progress(ROOT, _SECTIONS)
     st = trainer.maybe_launch(ROOT, prog, _read_settings().get("auto_train", True), _now())
-    _emit_threadsafe({"type": "state", "progress": prog, "training": st,
-                      "saved": record["id"], "flags": record["qc"]["flags"]})
-    return JSONResponse({"record": record, "progress": prog, "training": st})
-
-
-def self_or_none(denoise: bool, rt: np.ndarray | None) -> np.ndarray | None:
-    return rt if denoise else None
+    event = {"type": "state", "progress": prog, "training": st,
+             "flags": record["qc"]["flags"]}
+    event["saved" if persistence["accepted"] else "review_required"] = record["id"]
+    _emit_threadsafe(event)
+    return JSONResponse({"record": {**record, "persistence": persistence},
+                         "progress": prog, "training": st})
 
 
 @app.get("/api/clip/{prompt_id}/audio")
@@ -285,17 +472,41 @@ def api_clip_delete(prompt_id: str) -> JSONResponse:
 # --------------------------------------------------------------------------- #
 @app.post("/api/roomtone")
 def api_roomtone(file: UploadFile = File(...)) -> JSONResponse:
-    tmp = _save_upload(file)
+    staged = _stage_upload(file, maximum=MAX_ROOM_TONE_UPLOAD_BYTES)
+    output = ROOT / "data" / "staging" / f"room-tone-{uuid.uuid4().hex}.wav"
     try:
-        audio = processing.decode_to_48k_mono(tmp)
-    except Exception as e:
-        raise HTTPException(422, f"room-tone decode failed: {e}")
+        audio = processing.decode_to_48k_mono(
+            staged.path,
+            min_seconds=1.0,
+            max_seconds=30.0,
+            require_signal=False,
+        )
+        audio_contracts.write_pcm16_wav(
+            output,
+            audio,
+            audio_contracts.AUDIO_SPECS["master-48k"],
+            min_seconds=1.0,
+            max_seconds=30.0,
+            require_signal=False,
+        )
+        receipt = ingest.receipt_for_staged_path(ROOT, output)
+        publication = ingest.publish_content(
+            ROOT,
+            receipt,
+            label="room-tone-48k",
+            extension=".wav",
+        )
+        settings = _read_settings()
+        settings["room_tone_path"] = publication.relative_path
+        _write_settings(settings)
+    except (processing.ProcessingError, audio_contracts.AudioContractError, ingest.IngestError) as exc:
+        raise HTTPException(422, f"room-tone processing failed: {exc}") from exc
     finally:
-        tmp.unlink(missing_ok=True)
-    out = ROOT / "data" / "room_tone_48k.wav"
-    sf.write(str(out), audio, processing.CAPTURE_SR, subtype="PCM_16")
+        staged.cleanup()
+        output.unlink(missing_ok=True)
     return JSONResponse({"room_tone_sec": round(audio.size / processing.CAPTURE_SR, 2),
-                         "noise_floor_dbfs": processing.peak_dbfs(audio)})
+                         "noise_floor_dbfs": processing.peak_dbfs(audio),
+                         "sha256": publication.sha256})
 
 
 @app.post("/api/train")
@@ -318,7 +529,7 @@ def api_set_settings(auto_train: bool = Form(...), denoise: bool = Form(True),
                      whisper_model: str = Form("base.en")) -> JSONResponse:
     if whisper_model not in qc_transcribe.ALLOWED_MODELS:
         raise HTTPException(400, f"whisper_model must be one of {qc_transcribe.ALLOWED_MODELS}")
-    data = {"auto_train": bool(auto_train), "denoise": bool(denoise),
+    data = {**_read_settings(), "auto_train": bool(auto_train), "denoise": bool(denoise),
             "whisper_model": whisper_model}
     _write_settings(data)
     qc_transcribe.configure(whisper_model)

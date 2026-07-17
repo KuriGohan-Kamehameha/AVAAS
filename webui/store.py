@@ -31,6 +31,8 @@ MAX_LEGACY_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_LEGACY_LINES = 10_000
 MAX_LEGACY_LINE_BYTES = 64 * 1024
 MAX_PROMPTS = 2_000
+MAX_DERIVATIVES_PER_TAKE = 8
+MAX_QC_FLAGS = 64
 MAX_EXPORT_ROWS = 10_000
 MAX_EXPORT_BYTES = 64 * 1024 * 1024
 HASH_CHUNK_BYTES = 64 * 1024
@@ -543,6 +545,184 @@ class Store:
         )
         with self.transaction() as connection:
             self._insert_qc(connection, values)
+
+    def commit_capture(
+        self,
+        *,
+        take_id: str,
+        prompt_id: str,
+        corpus_version: str,
+        raw_path: str,
+        raw_sha256: str,
+        source: str,
+        metadata: dict[str, Any],
+        derivatives: list[dict[str, Any]],
+        qc: dict[str, Any],
+        expected_generation: int,
+        override_reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically persist a take, derivatives, QC, and optional acceptance.
+
+        Content is verified before the transaction. A non-passing take remains
+        reviewable but cannot replace the accepted pointer without a stored
+        override reason. P10: derivative and flag collections have fixed caps.
+        """
+        take_id = _identifier(take_id, "take id")
+        prompt_id = _identifier(prompt_id, "prompt id")
+        corpus_version = _bounded_text(corpus_version, "corpus version", 64)
+        source = _identifier(source, "capture source")
+        raw_sha256 = _digest(raw_sha256, "raw sha256")
+        raw_path, _ = self._relative(raw_path, "raw")
+        self._verify_content(raw_path, raw_sha256, "raw")
+        if not isinstance(metadata, dict):
+            raise StoreContractError("capture metadata must be an object")
+        metadata_json = _json(metadata, "capture metadata")
+        if (
+            not isinstance(expected_generation, int)
+            or isinstance(expected_generation, bool)
+            or expected_generation < 0
+        ):
+            raise StoreContractError("invalid expected generation")
+        if override_reason is not None:
+            override_reason = _bounded_text(override_reason, "override reason", 2_000)
+
+        if not isinstance(derivatives, list) or not 1 <= len(derivatives) <= MAX_DERIVATIVES_PER_TAKE:
+            raise StoreContractError("derivative count outside bounds")
+        derivative_keys = {
+            "derivative_id",
+            "purpose",
+            "path",
+            "sha256",
+            "sample_rate",
+            "channels",
+            "sample_format",
+            "frames",
+            "duration_ms",
+            "parameters",
+        }
+        prepared_derivatives: list[tuple[Any, ...]] = []
+        seen_purposes: set[str] = set()
+        for derivative in derivatives:
+            if not isinstance(derivative, dict) or set(derivative) != derivative_keys:
+                raise StoreContractError("derivative keys mismatch")
+            purpose = _identifier(derivative.get("purpose"), "derivative purpose")
+            if purpose in seen_purposes:
+                raise StoreContractError("duplicate derivative purpose")
+            seen_purposes.add(purpose)
+            path, _ = self._relative(derivative.get("path"), "derivative")
+            sha256 = _digest(derivative.get("sha256"), "derivative sha256")
+            self._verify_content(path, sha256, "derivative")
+            sample_rate = derivative.get("sample_rate")
+            channels = derivative.get("channels")
+            frames = derivative.get("frames")
+            duration_ms = derivative.get("duration_ms")
+            if (
+                not isinstance(sample_rate, int)
+                or isinstance(sample_rate, bool)
+                or not 8_000 <= sample_rate <= 192_000
+                or not isinstance(channels, int)
+                or isinstance(channels, bool)
+                or not 1 <= channels <= 8
+                or not isinstance(frames, int)
+                or isinstance(frames, bool)
+                or not 1 <= frames <= 200_000_000
+                or not isinstance(duration_ms, int)
+                or isinstance(duration_ms, bool)
+                or not 0 <= duration_ms <= 7_200_000
+            ):
+                raise StoreContractError("derivative audio metadata outside bounds")
+            prepared_derivatives.append(
+                (
+                    _identifier(derivative.get("derivative_id"), "derivative id"),
+                    take_id,
+                    purpose,
+                    sha256,
+                    path,
+                    sample_rate,
+                    channels,
+                    _identifier(derivative.get("sample_format"), "sample format"),
+                    frames,
+                    duration_ms,
+                    _json(derivative.get("parameters"), "derivative parameters"),
+                )
+            )
+
+        if not isinstance(qc, dict) or set(qc) != {
+            "qc_id",
+            "status",
+            "flags",
+            "metrics",
+            "transcript",
+        }:
+            raise StoreContractError("qc keys mismatch")
+        status = _identifier(qc.get("status"), "qc status")
+        if status not in {"pass", "review_required", "unavailable"}:
+            raise StoreContractError("unsupported qc status")
+        flags = qc.get("flags")
+        if (
+            not isinstance(flags, list)
+            or len(flags) > MAX_QC_FLAGS
+            or any(
+                not isinstance(flag, str) or not 1 <= len(flag) <= 128
+                for flag in flags
+            )
+            or len(set(flags)) != len(flags)
+            or (status == "pass") != (len(flags) == 0)
+        ):
+            raise StoreContractError("qc flags/status mismatch")
+        if not isinstance(qc.get("metrics"), dict):
+            raise StoreContractError("qc metrics must be an object")
+        if status == "pass" and override_reason is not None:
+            raise StoreContractError("passing qc must not carry an override reason")
+        transcript = qc.get("transcript")
+        if transcript is not None:
+            transcript = _bounded_text(transcript, "transcript", 16_000, empty=True)
+        qc_values = (
+            _identifier(qc.get("qc_id"), "qc id"),
+            take_id,
+            status,
+            _json(flags, "qc flags"),
+            _json(qc.get("metrics"), "qc metrics"),
+            transcript,
+        )
+        should_accept = status == "pass" or override_reason is not None
+
+        with self.transaction() as connection:
+            current = connection.execute(
+                "SELECT take_id,generation FROM acceptances WHERE prompt_id=? AND corpus_version=?",
+                (prompt_id, corpus_version),
+            ).fetchone()
+            generation = int(current["generation"]) if current is not None else 0
+            if generation != expected_generation:
+                raise StoreConflict(
+                    f"acceptance generation is {generation}, expected {expected_generation}"
+                )
+            self._insert_take(
+                connection,
+                take_id=take_id,
+                prompt_id=prompt_id,
+                corpus_version=corpus_version,
+                raw_path=raw_path,
+                raw_sha256=raw_sha256,
+                source=source,
+                metadata_json=metadata_json,
+            )
+            for values in prepared_derivatives:
+                self._insert_derivative(connection, values)
+            self._insert_qc(connection, qc_values)
+            if not should_accept:
+                return {"accepted": False, "generation": generation, "take_id": take_id}
+            if current is not None and current["take_id"] == take_id:
+                return {"accepted": True, "generation": generation, "take_id": take_id}
+            generation = self._accept_tx(
+                connection,
+                prompt_id=prompt_id,
+                corpus_version=corpus_version,
+                take_id=take_id,
+                expected_generation=expected_generation,
+                reason=override_reason,
+            )
+            return {"accepted": True, "generation": generation, "take_id": take_id}
 
     def _accept_tx(
         self,
