@@ -5,6 +5,11 @@ One SQLite connection is opened per operation.  Writes use ``BEGIN IMMEDIATE``
 and roll back on ``BaseException``.  P10: migrations, JSON, legacy input,
 content files, rows, paths, hashes, and backup size all have fixed ceilings.
 """
+# P10 RELAXATIONS:
+# R4: migrations, tombstones, and the bounded one-time legacy import remain
+# single SQLite transactions so rollback and audit behavior cannot split.
+# R5: public methods delegate validation to the shared identifier/path/hash/JSON
+# contracts and SQLite constraints; the scanner does not count those calls.
 from __future__ import annotations
 
 import hashlib
@@ -1202,6 +1207,9 @@ class Store:
             target = sqlite3.connect(temporary)
             source.backup(target, pages=256)
             target.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            journal = str(target.execute("PRAGMA journal_mode=DELETE").fetchone()[0]).lower()
+            if journal != "delete":
+                raise StoreContractError("backup journal mode could not be made self-contained")
             target.close()
             target = None
             with temporary.open("rb") as handle:

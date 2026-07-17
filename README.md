@@ -6,7 +6,8 @@ readiness for fine-tuning a text-to-speech model on your own voice.
 
 Recording happens in the browser (`getUserMedia`), so a microphone and a modern
 browser are all you need on the capture side. Everything is processed and stored
-on the server you run — **your recordings never leave your machine.**
+on the server you run. Recordings are never sent to a third-party service and leave
+the studio only through an explicit, checksummed export to your own training worker.
 
 ## Features
 
@@ -26,6 +27,10 @@ on the server you run — **your recordings never leave your machine.**
   932 prompts across 13 sections, biased toward phone-call distribution: greetings,
   numbers, names, hold phrases, dialogues, plus Harvard / CMU-ARCTIC prose for phonetic
   and prosodic coverage.
+- **One voice, two presentations** — Satraj records one natural human corpus. Paired
+  first-person Satraj and Piranesi lines enrich that same voice identity; synthesis
+  policy selects General North American/Canadian English for Satraj or King's English
+  for Piranesi without asking the speaker to perform a foreign accent.
 - **Progress + readiness gate** — per-section progress, a manifest of every take, and a
   readiness gate that can (optionally) trigger a downstream training job.
 
@@ -34,11 +39,19 @@ on the server you run — **your recordings never leave your machine.**
 ### Docker (recommended)
 
 ```sh
-docker build -t avaas .
-docker run -d --name avaas --restart unless-stopped \
-  -p 127.0.0.1:8731:8731 -v avaas-data:/app/data avaas
-# open http://localhost:8731
+mkdir -p data
+# Native Linux only: sudo chown 10001:10001 data && chmod 0700 data
+AVAAS_REVISION="$(git rev-parse HEAD)" docker compose up -d --build
+curl --fail http://127.0.0.1:8732/readyz
+# open http://localhost:8732
 ```
+
+Compose runs the exact locked dependency set as UID/GID 10001, with a read-only
+application filesystem, dropped capabilities, bounded resources, a loopback-only
+canary port, and one explicit writable data directory. It refuses to create a missing
+bind path. For a durable Linux deployment, provision (for example)
+`/srv/avaas-data` as mode `0700`, owned by `10001:10001`, and set
+`AVAAS_DATA_DIR=/srv/avaas-data`.
 
 > **Microphone note.** `getUserMedia` only works in a *secure context*:
 > `http://localhost` is fine, but any other host needs **HTTPS**. To use AVAAS from
@@ -49,11 +62,39 @@ docker run -d --name avaas --restart unless-stopped \
 
 ```sh
 python3.12 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt        # plus a system ffmpeg
+python -m pip install --require-hashes -r requirements-dev.lock
 python scripts/materialize_prompt_corpora.py --fetch
 python -m webui.prompts --write
 uvicorn webui.server:app --host 127.0.0.1 --port 8731
 ```
+
+This also requires a system `ffmpeg` and `libsndfile`.
+
+## Voice identity, accents, and model releases
+
+Record every ordinary prompt in your comfortable, natural voice. The corpus has one
+source human, `speaker_id=satraj`; `satraj` and `piranesi` are presentation aliases,
+not separate speakers or separate training silos. The paired lines intentionally let
+the model hear the same vocal identity introducing itself both ways.
+
+Accent and delivery are separate from identity. The expressive worker can condition
+the shared voice toward the alias policy at synthesis time: Satraj defaults to
+`en-CA` / General North American-Canadian and Piranesi to `en-GB` / received-pronunciation
+King's English. Do not imitate the British accent while recording the core corpus.
+Optional, clearly labeled calibration prompts may capture safe examples such as warm,
+authoritative, urgent, whispered, or projected delivery; only controls that pass the
+GPU canary are advertised. Additional language packs remain disabled until their
+languages and pronunciations are declared explicitly.
+
+The voice does not mutate online after every take. Releases are versioned:
+
+1. A small accepted reference set can produce an explicitly labeled zero-shot preview.
+2. Once the readiness gate has a sufficiently broad, clean corpus, AVAAS seals an
+   immutable training/adaptation job and builds a candidate.
+3. Listening, identity, accent, intelligibility, latency, organ, and VoIP gates decide
+   whether that candidate is promoted; the prior version remains available to roll back.
+4. Later accepted recordings can seed a new candidate release, so the voice improves in
+   controlled generations rather than changing underneath live calls.
 
 ## Using the recording script
 
@@ -79,6 +120,23 @@ python -m webui.prompts --write
 pytest -q
 ```
 
+## Backup and recovery
+
+Backups use SQLite's online backup API, include every accepted checksummed recording,
+exclude service secrets, and publish append-only bundles only after verification:
+
+```sh
+docker exec avaas-studio-canary \
+  python /app/scripts/backup.py /app /app/data/backups --backup-id before-upgrade
+docker exec avaas-studio-canary \
+  python /app/scripts/restore_verify.py \
+  /app/data/backups/before-upgrade /unused --verify-only
+```
+
+A restore refuses an existing destination and stages a fully verified copy before an
+atomic publish. Restore to a new path while the studio is stopped, inspect it, and only
+then replace the active data directory; never restore over a live corpus.
+
 ## Layout
 
 ```
@@ -92,8 +150,9 @@ Dockerfile        container image (python3.12 + ffmpeg + deps)
 ## Privacy
 
 `data/` (your recordings, transcripts, and manifest) is git-ignored and never
-committed. AVAAS does no network calls except an optional one-time model download
-for `faster-whisper` QC.
+committed. Runtime captures remain on the self-hosted studio unless you explicitly
+export them to a training worker. Image preparation fetches the exact hash-pinned
+prompt source, and optional `faster-whisper` QC may download its configured model.
 
 ## Part of the Piranesi voice stack
 

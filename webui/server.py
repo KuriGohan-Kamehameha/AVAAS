@@ -17,6 +17,12 @@ Serves a single-page studio UI and the API behind it:
 
 Run:  cd ~/voice && .venv/bin/python -m uvicorn webui.server:app --port 8731
 """
+# P10 RELAXATIONS:
+# R4: capture/review handlers are bounded, linear transactions whose local
+# cleanup and compare-and-swap state must remain visible in one audit scope.
+# R5: FastAPI's typed boundary, the bounded-body middleware, and Store contract
+# validators enforce preconditions; duplicating them as handler assertions
+# would create a divergent second validation policy.
 from __future__ import annotations
 
 import asyncio
@@ -24,6 +30,7 @@ import hmac
 import json
 import os
 import re
+import sqlite3
 import stat
 import tempfile
 import time
@@ -75,6 +82,35 @@ async def _lifespan(_application: FastAPI):
 
 app = FastAPI(title="AVAAS", lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
+@app.get("/healthz")
+def healthz() -> JSONResponse:
+    return JSONResponse(
+        {"schema": "avaas/liveness@v1", "status": "ok"},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/readyz")
+def readyz() -> JSONResponse:
+    ready = bool(_SECTIONS)
+    try:
+        migrations = Store(ROOT).migration_rows() if ready else []
+        ready = ready and bool(migrations)
+    except (OSError, sqlite3.Error, StoreContractError):
+        ready = False
+        migrations = []
+    return JSONResponse(
+        {
+            "schema": "avaas/service-readiness@v1",
+            "ready": ready,
+            "prompt_count": sum(len(section.get("prompts", [])) for section in _SECTIONS),
+            "migration_count": len(migrations),
+        },
+        status_code=200 if ready else 503,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.middleware("http")

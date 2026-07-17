@@ -34,14 +34,29 @@ def test_built_container_starts_with_compiled_identity_corpus() -> None:
     suffix = str(os.getpid())
     image = f"avaas-corpus-smoke:{suffix}"
     container = f"avaas-corpus-smoke-{suffix}"
+    volume = f"avaas-corpus-smoke-data-{suffix}"
     try:
         _run("docker", "build", "--quiet", "--tag", image, ".", timeout=900)
+        _run("docker", "volume", "create", volume)
         _run(
             "docker",
             "run",
             "--detach",
             "--name",
             container,
+            "--user",
+            "10001:10001",
+            "--read-only",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges:true",
+            "--pids-limit",
+            "256",
+            "--tmpfs",
+            "/tmp:rw,nosuid,nodev,noexec,size=256m,mode=1777",
+            "--mount",
+            f"source={volume},target=/app/data",
             "--publish",
             "127.0.0.1::8731",
             image,
@@ -68,9 +83,51 @@ def test_built_container_starts_with_compiled_identity_corpus() -> None:
         ]
         assert len(identity_prompts) == 80
         assert {item["identity"] for item in identity_prompts} == {"satraj", "piranesi"}
+        assert all("Sat" not in item["text"].split() for item in identity_prompts)
+        readiness = json.loads(
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/readyz", timeout=2).read()
+        )
+        assert readiness["ready"] is True
+        assert readiness["prompt_count"] == 932
+        assert _run("docker", "inspect", "--format", "{{.Config.User}}", container).stdout.strip() == "10001:10001"
+        _run(
+            "docker",
+            "exec",
+            container,
+            "sh",
+            "-c",
+            'test ! -w /app && test -w /app/data && test "$(id -u)" = 10001',
+        )
+        _run(
+            "docker",
+            "exec",
+            container,
+            "python",
+            "/app/scripts/backup.py",
+            "/app",
+            "/app/data/backups",
+            "--backup-id",
+            "container-smoke",
+        )
+        _run(
+            "docker",
+            "exec",
+            container,
+            "python",
+            "/app/scripts/restore_verify.py",
+            "/app/data/backups/container-smoke",
+            "/app/data/restored-smoke",
+        )
     finally:
         subprocess.run(
             ["docker", "rm", "--force", container],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+        subprocess.run(
+            ["docker", "volume", "rm", "--force", volume],
             cwd=ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

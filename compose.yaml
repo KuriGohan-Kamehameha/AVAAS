@@ -1,0 +1,48 @@
+name: avaas
+
+services:
+  studio:
+    image: "avaas:${AVAAS_IMAGE_TAG:-canary}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        AVAAS_REVISION: "${AVAAS_REVISION:-unknown}"
+    container_name: "${AVAAS_CONTAINER_NAME:-avaas-studio-canary}"
+    init: true
+    restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: "${AVAAS_MEMORY_LIMIT:-4g}"
+    cpus: "${AVAAS_CPU_LIMIT:-4.0}"
+    stop_grace_period: 35s
+    ports:
+      - "127.0.0.1:${AVAAS_PORT:-8732}:8731"
+    volumes:
+      - type: bind
+        source: "${AVAAS_DATA_DIR:-./data}"
+        target: /app/data
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=256m,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8731/readyz', timeout=2); raise SystemExit(0 if r.status == 200 else 1)"
+      interval: 15s
+      timeout: 3s
+      start_period: 30s
+      retries: 4
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
