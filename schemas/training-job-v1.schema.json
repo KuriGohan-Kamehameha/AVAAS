@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avaas.invalid/schemas/training-job-v1.schema.json",
+  "title": "AVAAS immutable voice training job",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "job_id",
+    "idempotency_key",
+    "engine",
+    "profile",
+    "corpus",
+    "target_audio",
+    "hyperparameters",
+    "toolchain",
+    "source_pins",
+    "output",
+    "promotable",
+    "fixture",
+    "author",
+    "created_at"
+  ],
+  "properties": {
+    "schema": {
+      "const": "avaas/training-job@v1"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^job-[0-9a-f]{48}$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "engine": {
+      "enum": [
+        "cosyvoice3",
+        "piper"
+      ]
+    },
+    "profile": {
+      "enum": [
+        "expressive-zero-shot",
+        "medium"
+      ]
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "sha256",
+        "split_sha256",
+        "record_count"
+      ],
+      "properties": {
+        "schema": {
+          "const": "avaas/corpus-snapshot@v1"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "split_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "record_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "target_audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose",
+        "sample_rate",
+        "channels",
+        "encoding"
+      ],
+      "properties": {
+        "purpose": {
+          "enum": [
+            "serve-24k",
+            "piper-22050"
+          ]
+        },
+        "sample_rate": {
+          "enum": [
+            22050,
+            24000
+          ]
+        },
+        "channels": {
+          "const": 1
+        },
+        "encoding": {
+          "const": "pcm_s16le"
+        }
+      }
+    },
+    "hyperparameters": {
+      "type": "object",
+      "minProperties": 3,
+      "maxProperties": 8
+    },
+    "toolchain": {
+      "type": "object",
+      "minProperties": 3,
+      "maxProperties": 8
+    },
+    "source_pins": {
+      "type": "object",
+      "minProperties": 3,
+      "maxProperties": 8
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "path"
+      ],
+      "properties": {
+        "schema": {
+          "const": "avaas/training-result@v1"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^results/job-[0-9a-f]{48}$"
+        }
+      }
+    },
+    "promotable": {
+      "type": "boolean"
+    },
+    "fixture": {
+      "type": "boolean"
+    },
+    "author": {
+      "const": "CPCS"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

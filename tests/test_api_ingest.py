@@ -41,7 +41,6 @@ def _isolated_server(tmp_path: Path, monkeypatch) -> tuple[TestClient, dict]:
     monkeypatch.setattr(server, "SETTINGS", tmp_path / "data" / "studio_settings.json")
     monkeypatch.setattr(server, "_SECTIONS", sections)
     monkeypatch.setattr(server, "_PROMPTS", {prompt["id"]: prompt})
-    monkeypatch.setattr(server.trainer, "maybe_launch", lambda *_args, **_kwargs: {"state": "idle"})
     corpus.initialize(tmp_path, sections)
     return TestClient(server.app), prompt
 

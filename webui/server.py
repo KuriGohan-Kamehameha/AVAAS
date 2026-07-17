@@ -43,8 +43,10 @@ from . import (
     ingest,
     processing,
     qc_transcribe,
+    readiness,
     script_parser,
     trainer,
+    training_jobs,
 )
 from .store import Store, StoreConflict, StoreContractError
 
@@ -147,6 +149,10 @@ def _capture_codec() -> capture_tokens.CaptureTokenCodec:
     return capture_tokens.CaptureTokenCodec(capture_tokens.load_or_create_key(ROOT))
 
 
+def _trainer_health() -> dict | None:
+    return readiness.load_trainer_health(ROOT)
+
+
 async def _json_object(request: Request) -> dict:
     raw = await request.body()
     if not 1 <= len(raw) <= MAX_JSON_BODY_BYTES:
@@ -186,8 +192,8 @@ def _emit_threadsafe(event: dict) -> None:
 
 def _state_event() -> dict:
     """The canonical 'something changed' payload — full progress + training."""
-    prog = corpus.progress(ROOT, _SECTIONS)
-    st = trainer.maybe_launch(ROOT, prog, _read_settings().get("auto_train", False), _now())
+    prog = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
+    st = trainer.status(ROOT, prog)
     return {"type": "state", "progress": prog, "training": st}
 
 
@@ -339,8 +345,8 @@ def api_script() -> JSONResponse:
 
 @app.get("/api/progress")
 def api_progress() -> JSONResponse:
-    prog = corpus.progress(ROOT, _SECTIONS)
-    st = trainer.maybe_launch(ROOT, prog, _read_settings().get("auto_train", False), _now())
+    prog = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
+    st = trainer.status(ROOT, prog)
     return JSONResponse({"progress": prog, "training": st,
                          "qc_available": qc_transcribe.available()})
 
@@ -577,8 +583,13 @@ def api_clip(prompt_id: str = Form(...),
     except StoreContractError as exc:
         raise HTTPException(409, "capture could not be committed") from exc
 
-    prog = corpus.progress(ROOT, _SECTIONS)
-    st = trainer.maybe_launch(ROOT, prog, _read_settings().get("auto_train", False), _now())
+    prog = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
+    st = trainer.maybe_enqueue(
+        ROOT,
+        prog,
+        auto=_read_settings().get("auto_train", False),
+        now_iso=_now(),
+    )
     event = {"type": "state", "progress": prog, "training": st,
              "flags": record["qc"]["flags"]}
     event["saved" if persistence["accepted"] else "review_required"] = record["id"]
@@ -653,12 +664,12 @@ async def api_accept_review(take_id: str, request: Request) -> JSONResponse:
         raise HTTPException(409, str(exc)) from exc
     except StoreContractError as exc:
         raise HTTPException(400, "take could not be accepted") from exc
-    progress = corpus.progress(ROOT, _SECTIONS)
-    training = trainer.maybe_launch(
+    progress = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
+    training = trainer.maybe_enqueue(
         ROOT,
         progress,
-        _read_settings().get("auto_train", False),
-        _now(),
+        auto=_read_settings().get("auto_train", False),
+        now_iso=_now(),
     )
     _emit_threadsafe(
         {
@@ -716,7 +727,7 @@ async def api_reject_review(take_id: str, request: Request) -> JSONResponse:
         raise HTTPException(409, str(exc)) from exc
     except StoreContractError as exc:
         raise HTTPException(400, "take could not be rejected") from exc
-    progress = corpus.progress(ROOT, _SECTIONS)
+    progress = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
     event = {"type": "state", "progress": progress}
     if was_accepted:
         event["deleted"] = take["prompt_id"]
@@ -739,9 +750,9 @@ def api_clip_delete(prompt_id: str) -> JSONResponse:
         raise HTTPException(404, "no such clip")
     corpus.tombstone_record(ROOT, prompt_id, reason="studio retake requested")
     _emit_threadsafe({"type": "state", "deleted": prompt_id,
-                      "progress": corpus.progress(ROOT, _SECTIONS)})
+                      "progress": readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())})
     return JSONResponse({"deleted": prompt_id,
-                         "progress": corpus.progress(ROOT, _SECTIONS)})
+                         "progress": readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())})
 
 # --------------------------------------------------------------------------- #
 # room tone + training + settings
@@ -786,11 +797,24 @@ def api_roomtone(file: UploadFile = File(...)) -> JSONResponse:
 
 
 @app.post("/api/train")
-def api_train(force: bool = Form(False)) -> JSONResponse:
-    prog = corpus.progress(ROOT, _SECTIONS)
+def api_train(force: bool = Form(False),
+              engine: str = Form("cosyvoice3"),
+              profile: str = Form("expressive-zero-shot")) -> JSONResponse:
+    prog = readiness.evaluate(ROOT, _SECTIONS, trainer_health=_trainer_health())
     if not prog["ready"] and not force:
         raise HTTPException(409, {"msg": "corpus not at readiness gate", "progress": prog})
-    st = trainer.launch(ROOT, _now(), force=bool(force))
+    try:
+        st = trainer.enqueue(
+            ROOT,
+            prog,
+            engine=engine,
+            profile=profile,
+            now_iso=_now(),
+            fixture=bool(force),
+            promotable=not bool(force),
+        )
+    except (training_jobs.JobContractError, training_jobs.JobConflict) as exc:
+        raise HTTPException(409, "training job could not be enqueued") from exc
     _emit_threadsafe({"type": "state", "progress": prog, "training": st})
     return JSONResponse({"training": st})
 

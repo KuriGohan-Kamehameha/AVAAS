@@ -1108,7 +1108,7 @@ class Store:
         try:
             rows = connection.execute(
                 "SELECT p.prompt_id,p.corpus_version,p.prompt_text,p.section,p.kind,t.take_id,"
-                "t.source,t.raw_path,t.metadata_json,t.created_at,a.generation,"
+                "t.source,t.raw_path,t.metadata_json,t.created_at,a.generation,a.override_reason,"
                 "d.path AS processed_path,q.status AS qc_status,q.flags_json,q.metrics_json,"
                 "q.transcript FROM acceptances a "
                 "JOIN prompts p ON p.prompt_id=a.prompt_id AND p.corpus_version=a.corpus_version "
@@ -1136,6 +1136,7 @@ class Store:
                     "corpus_version": row["corpus_version"],
                     "take_id": row["take_id"],
                     "generation": row["generation"],
+                    "override_reason": row["override_reason"],
                     "section": row["section"],
                     "kind": row["kind"],
                     "prompt_text": row["prompt_text"],

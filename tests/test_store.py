@@ -66,6 +66,7 @@ def test_migrations_and_connection_pragmas_are_ordered_and_idempotent(tmp_path: 
         (1, "initial"),
         (2, "import_legacy"),
         (3, "capture_sessions"),
+        (4, "voice_training_jobs"),
     ]
     assert all(len(row["sha256"]) == 64 for row in first)
     assert store.diagnostics() == {
