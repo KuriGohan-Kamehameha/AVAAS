@@ -543,7 +543,10 @@ The initial compatible `medium` checkpoint is pinned to repository
 `en/en_US/ljspeech/medium/lj-med_1000.ckpt`, with SHA-256
 `dcf2449bdbdaad09256a08dfac211c59f6b36ce8d3f244fd844a9eb1d7384c7c`.
 Its repository license is MIT and its LJSpeech source corpus is public domain.
-The job contract carries all four values and refuses a mismatch before training.
+Because that checkpoint is single-speaker, it is used only through Piper's
+vocoder warm-start path; it is never resumed wholesale into the two-presentation
+model. The job contract pins that use mode, initializes exactly two conditioning
+slots, and refuses a mismatch before training.
 
 Training cache and checkpoints are resumable and stored on durable capacity.
 The worker never stops unrelated inference services automatically. A resource

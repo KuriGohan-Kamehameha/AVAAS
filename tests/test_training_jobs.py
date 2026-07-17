@@ -231,4 +231,8 @@ def test_piper_job_pins_the_exact_medium_base_checkpoint_and_license(tmp_path: P
         ),
         "base_checkpoint_license": "MIT",
         "base_training_data_license": "Public-Domain",
+        "base_checkpoint_use": "vocoder-warmstart-only",
     }
+    assert manifest["hyperparameters"]["num_speakers"] == 2
+    assert manifest["hyperparameters"]["precision"] == "32-true"
+    assert manifest["hyperparameters"]["gradient_accumulation"] == 1

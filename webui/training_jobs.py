@@ -80,6 +80,9 @@ ENGINE_PROFILES = {
             "learning_rate": 0.0002,
             "max_steps": 200_000,
             "synthetic_max_fraction": 0.35,
+            "num_speakers": 2,
+            "precision": "32-true",
+            "gradient_accumulation": 1,
         },
         "toolchain": {
             "python": "3.12",
@@ -99,6 +102,7 @@ ENGINE_PROFILES = {
             ),
             "base_checkpoint_license": "MIT",
             "base_training_data_license": "Public-Domain",
+            "base_checkpoint_use": "vocoder-warmstart-only",
         },
     },
 }
